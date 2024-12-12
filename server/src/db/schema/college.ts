@@ -1,9 +1,10 @@
 import { relations } from 'drizzle-orm';
 import { integer, pgEnum, pgTable, text, uuid } from 'drizzle-orm/pg-core';
-import { user } from './user';
+import { user } from './index.js';
 
 export const collegeTypeEnum = pgEnum('college_type', [
-	'college, graduate_school',
+	'college',
+	'graduate_school',
 	'university',
 ]);
 

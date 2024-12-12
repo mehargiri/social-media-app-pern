@@ -1,42 +1,40 @@
-import { db } from '@/db';
-import { user } from '@/db/schema';
+import { db } from '@/db/index.js';
+import { user } from '@/db/schema/index.js';
+import { convertToSUUID, convertToUUID } from '@/utils/general.utils.js';
 import {
-	DeleteUserType,
+	LoginUserType,
 	RegisterUserType,
 	UpdateUserType,
-} from '@/zod-schemas/user';
-import { eq, ilike } from 'drizzle-orm';
+} from '@/zod-schemas/user.js';
+import { eq, ilike, sql } from 'drizzle-orm';
+import { SUUID } from 'short-uuid';
 
 // Read User
-export const getUser = async (userId: string) => {
+export const findUserById = async (data: { id: SUUID }) => {
 	const foundUser = await db.query.user.findFirst({
 		columns: {
 			password: false,
 			confirmedEmail: false,
 			firstName: false,
 			lastName: false,
+			refreshToken: false,
+			createdAt: false,
+			updatedAt: false,
 		},
-		where: eq(user.id, userId),
+		where: eq(user.id, convertToUUID(data.id)),
 		with: {
-			friends: {
+			friendships: {
 				columns: {
-					userId: false,
-					friendId: false,
+					status: true,
 				},
 				with: {
 					friend: {
 						columns: {
 							id: true,
 							fullName: true,
-							username: true,
 							profilePic: true,
 						},
 					},
-				},
-			},
-			posts: {
-				columns: {
-					userId: false,
 				},
 			},
 			work: {
@@ -55,48 +53,135 @@ export const getUser = async (userId: string) => {
 		},
 	});
 
-	return foundUser;
+	let foundUserWithSUUID;
+
+	if (foundUser) {
+		const { college, work, highSchool, friendships, ...user } = foundUser;
+
+		foundUserWithSUUID = {
+			...user,
+			id: convertToSUUID(user.id),
+			college: college ? { ...college, id: convertToSUUID(college.id) } : null,
+			work: work ? { ...work, id: convertToSUUID(work.id) } : null,
+			highSchool: highSchool
+				? { ...highSchool, id: convertToSUUID(highSchool.id) }
+				: null,
+			friendships: friendships.map((friendItem) => ({
+				...friendItem,
+				friend: {
+					...friendItem.friend,
+					id: convertToSUUID(friendItem.friend.id),
+				},
+			})),
+		};
+	}
+	return foundUserWithSUUID;
 };
 
-export const getUsersByName = async (name: string) => {
-	const foundUsers = await db.query.user.findMany({
-		columns: {
-			id: true,
-			fullName: true,
-			username: true,
-			profilePic: true,
-		},
-		where: ilike(user.fullName, name),
-	});
+export const findUsersByName = async (data: { name: string }) => {
+	const foundUsers = await db
+		.select({
+			id: user.id,
+			fullName: user.fullName,
+			profilePic: user.profilePic,
+		})
+		.from(user)
+		.where(ilike(user.fullName, data.name))
+		.limit(5)
+		.orderBy(user.fullName);
 
-	return foundUsers;
+	const foundUsersWithSUUID = foundUsers.map((user) => ({
+		...user,
+		id: convertToSUUID(user.id),
+	}));
+
+	return foundUsersWithSUUID;
 };
 
 // Create User
 export const createUser = async (data: RegisterUserType) => {
-	const newUser = await db
-		.insert(user)
-		.values({ ...data, username: data.email })
-		.returning({ id: user.id });
-	return newUser[0];
+	const newUser = await db.insert(user).values(data).returning({ id: user.id });
+
+	const newUserWithSUUID = newUser.map((user) => ({
+		...user,
+		id: convertToSUUID(user.id),
+	}));
+
+	return newUserWithSUUID[0];
 };
 
 // Update User
-export const updateUser = async (data: UpdateUserType) => {
+export const updateUserById = async (data: UpdateUserType) => {
 	const updatedUser = await db
 		.update(user)
 		.set(data)
-		.where(eq(user.id, data.id))
+		.where(eq(user.id, convertToUUID(data.id)))
 		.returning({ id: user.id });
-	return updatedUser[0];
+
+	const updatedUserWithSUUID = updatedUser.map((user) => ({
+		...user,
+		id: convertToSUUID(user.id),
+	}));
+	return updatedUserWithSUUID[0];
 };
 
 // Delete User
-export const deleteUser = async (data: DeleteUserType) => {
+export const deleteUserById = async (data: { id: SUUID }) => {
 	const deletedUser = await db
 		.delete(user)
-		.where(eq(user.id, data.id))
+		.where(eq(user.id, convertToUUID(data.id)))
 		.returning({ id: user.id });
 
-	return deletedUser[0];
+	const deletedUserWithSUUID = deletedUser.map((user) => ({
+		...user,
+		id: convertToSUUID(user.id),
+	}));
+
+	return deletedUserWithSUUID[0];
+};
+
+// User Confirmation for Update Action
+export const userExists = async (data: { id: SUUID }) => {
+	const isUser = await db.query.user.findFirst({
+		where: eq(user.id, data.id),
+		columns: { id: true },
+	});
+
+	let userWithSUUID;
+	if (isUser) userWithSUUID = { ...isUser, id: convertToSUUID(isUser.id) };
+
+	return userWithSUUID;
+};
+
+// User Data for Login Action
+export const getUserDataForLogin = async (
+	data: Omit<LoginUserType, 'password'>
+) => {
+	const foundUser = await db.query.user.findFirst({
+		where: eq(user.email, data.email),
+		columns: { password: true, id: true, refreshToken: true },
+	});
+
+	let foundUserWithSUUID;
+	if (foundUser) {
+		foundUserWithSUUID = { ...foundUser, id: convertToSUUID(foundUser.id) };
+	}
+
+	return foundUserWithSUUID;
+};
+
+// User Token Confirmation for Login Action
+export const userTokenExists = async (data: { refreshToken: string }) => {
+	const token = await db
+		.select({ id: user.id, refreshToken: user.refreshToken })
+		.from(user)
+		.where(sql`${data.refreshToken} = ANY(${user.refreshToken})`)
+		.limit(1);
+
+	const tokenWithGoodId = token.map((item) => ({
+		...item,
+		id: convertToSUUID(item.id),
+	}));
+
+	return tokenWithGoodId[0];
 };

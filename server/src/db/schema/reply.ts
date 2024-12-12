@@ -7,10 +7,8 @@ import {
 	text,
 	uuid,
 } from 'drizzle-orm/pg-core';
-import { timestamps } from './columns.helpers';
-import { comment } from './comment';
-import { like } from './like';
-import { user } from './user';
+import { timestamps } from './columns.helpers.js';
+import { comment, like, user } from './index.js';
 
 export const reply = pgTable(
 	'reply',

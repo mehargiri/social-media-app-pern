@@ -1,7 +1,7 @@
 import { relations } from 'drizzle-orm';
 import { pgTable, text, uuid } from 'drizzle-orm/pg-core';
-import { timestamps } from './columns.helpers';
-import { user } from './user';
+import { timestamps } from './columns.helpers.js';
+import { user } from './user.js';
 
 export const post = pgTable('post', {
 	id: uuid().primaryKey().defaultRandom(),

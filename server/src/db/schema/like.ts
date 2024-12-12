@@ -1,9 +1,6 @@
 import { relations, sql } from 'drizzle-orm';
 import { check, pgEnum, pgTable, primaryKey, uuid } from 'drizzle-orm/pg-core';
-import { comment } from './comment';
-import { post } from './post';
-import { reply } from './reply';
-import { user } from './user';
+import { comment, post, reply, user } from './index.js';
 
 export const likeTypesEnum = pgEnum('like_type', ['like', 'love', 'happy']);
 

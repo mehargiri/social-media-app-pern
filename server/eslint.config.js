@@ -6,6 +6,11 @@ import tseslint from 'typescript-eslint';
 
 export default tseslint.config(
 	{ ignores: ['dist/', 'node_modules/', 'drizzle.config.ts'] },
+	{
+		rules: {
+			'@typescript-eslint/no-misused-promises': 'off',
+		},
+	},
 	eslint.configs.recommended,
 	...tseslint.configs.strictTypeChecked,
 	...tseslint.configs.stylisticTypeChecked,

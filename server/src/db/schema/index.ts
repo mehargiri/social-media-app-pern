@@ -1,18 +1,18 @@
-export { college, collegeRelations, collegeTypeEnum } from './college';
-export { comment, commentRelations } from './comment';
+export { college, collegeRelations, collegeTypeEnum } from './college.js';
+export { comment, commentRelations } from './comment.js';
 export {
 	friendStatusEnum,
 	friendship,
 	friendshipRelations,
-} from './friendship';
-export { highSchool, highSchoolRelations } from './highSchool';
-export { like, likeRelations, likeTypesEnum } from './like';
+} from './friendship.js';
+export { highSchool, highSchoolRelations } from './highSchool.js';
+export { like, likeRelations, likeTypesEnum } from './like.js';
 export {
 	notification,
 	notificationRelations,
 	notificationTypeEnum,
-} from './notification';
-export { post, postRelations } from './post';
-export { reply, replyRelations } from './reply';
-export { user, userGenderEnum, userRelations } from './user';
-export { work, workRelations } from './work';
+} from './notification.js';
+export { post, postRelations } from './post.js';
+export { reply, replyRelations } from './reply.js';
+export { user, userGenderEnum, userRelations } from './user.js';
+export { work, workRelations } from './work.js';

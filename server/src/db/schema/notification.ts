@@ -1,10 +1,7 @@
 import { relations } from 'drizzle-orm';
 import { boolean, pgEnum, pgTable, uuid } from 'drizzle-orm/pg-core';
-import { timestamps } from './columns.helpers';
-import { comment } from './comment';
-import { post } from './post';
-import { reply } from './reply';
-import { user } from './user';
+import { timestamps } from './columns.helpers.js';
+import { comment, post, reply, user } from './index.js';
 
 export const notificationTypeEnum = pgEnum('notification_type', [
 	'friendRequest',

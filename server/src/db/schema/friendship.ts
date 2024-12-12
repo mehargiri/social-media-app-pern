@@ -1,7 +1,7 @@
 import { relations } from 'drizzle-orm';
 import { pgEnum, pgTable, primaryKey, uuid } from 'drizzle-orm/pg-core';
-import { timestamps } from './columns.helpers';
-import { user } from './user';
+import { timestamps } from './columns.helpers.js';
+import { user } from './index.js';
 
 export const friendStatusEnum = pgEnum('friend_status', [
 	'unfriend',

@@ -8,13 +8,8 @@ import {
 	text,
 	uuid,
 } from 'drizzle-orm/pg-core';
-
-import { college } from './college';
-import { timestamps } from './columns.helpers';
-import { friendship } from './friendship';
-import { highSchool } from './highSchool';
-import { post } from './post';
-import { work } from './work';
+import { timestamps } from './columns.helpers.js';
+import { college, friendship, highSchool, post, work } from './index.js';
 
 export const userGenderEnum = pgEnum('gender', ['male', 'female', 'other']);
 
@@ -30,7 +25,6 @@ export const user = pgTable(
 		phone: text(),
 		gender: userGenderEnum(),
 		birthday: date(),
-		username: text().notNull().unique(),
 		email: text().notNull().unique(),
 		password: text().notNull(),
 		profilePic: text(),
@@ -39,13 +33,14 @@ export const user = pgTable(
 		currentCity: text(),
 		hometown: text(),
 		confirmedEmail: boolean().notNull().default(false),
+		refreshToken: text().array(),
 		...timestamps,
 	},
 	(table) => [index('full_name_index').on(table.fullName)]
 );
 
 export const userRelations = relations(user, ({ many, one }) => ({
-	friends: many(friendship),
+	friendships: many(friendship),
 	posts: many(post),
 	work: one(work),
 	college: one(college),
