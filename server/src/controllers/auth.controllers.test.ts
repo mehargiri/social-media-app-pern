@@ -23,6 +23,7 @@ import {
 	validateCredentials,
 } from './auth.controllers.helpers.js';
 import {
+	CookieType,
 	CustomCookieRequest,
 	CustomLoginRequest,
 	loginUser,
@@ -69,7 +70,7 @@ describe('Authentication Controller Functions', () => {
 		},
 		cookies: {
 			tk: oldRefreshToken as string | undefined,
-		},
+		} as CookieType,
 	};
 
 	const res = {

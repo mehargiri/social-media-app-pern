@@ -1,21 +1,21 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 import {
+	allowedFileTypes,
 	convertToSUUID,
 	convertToUUID,
 	diskStorageDestination,
 	diskStorageFilename,
 	fileFilter,
+	imageFieldNames,
 	validateSUUID,
 } from '@/utils/general.utils.js';
 import { Request } from 'express';
 import { mkdirSync } from 'fs';
-import { MulterError } from 'multer';
 import path from 'path';
 import short, { SUUID } from 'short-uuid';
 import { afterAll, beforeEach, describe, expect, it, vi } from 'vitest';
 
-describe('General Helper Functions', () => {
-	vi.mock('@/utils/general.utils.ts', { spy: true });
+describe('General Utils Functions', () => {
 	vi.mock('fs', () => ({
 		mkdirSync: vi.fn().mockImplementation((_path, _options) => true),
 	}));
@@ -45,7 +45,6 @@ describe('General Helper Functions', () => {
 		describe('convertToUUID', () => {
 			it('should convert SUUID to UUID', () => {
 				const convertedToUUID = convertToUUID(testSUUID);
-				expect(convertToUUID).toHaveBeenCalledWith(testSUUID);
 				expect(convertedToUUID).toStrictEqual(testUUID);
 			});
 		});
@@ -53,7 +52,6 @@ describe('General Helper Functions', () => {
 		describe('convertToSUUID', () => {
 			it('should convert UUID to SUUID', () => {
 				const convertedToSUUID = convertToSUUID(testUUID);
-				expect(convertToSUUID).toHaveBeenCalledWith(testUUID);
 				expect(convertedToSUUID).toStrictEqual(testSUUID);
 			});
 		});
@@ -73,43 +71,43 @@ describe('General Helper Functions', () => {
 		});
 
 		describe("fileStorage's destination test function", () => {
+			imageFieldNames.forEach((name) => {
+				it(`should create directories for image field name: ${name}`, () => {
+					diskStorageDestination(
+						req,
+						{ ...mockFile, fieldname: name },
+						mockCallback
+					);
+
+					const expectedPath = path.join(
+						__dirname,
+						`../../public/${name ? `${name}s` : ''}`
+					);
+
+					expect(mkdirSync).toHaveBeenCalledWith(expectedPath, {
+						recursive: true,
+					});
+					expect(mockCallback).toHaveBeenCalledWith(null, expectedPath);
+				});
+			});
+
 			it.each([
-				['profileImage'],
-				['coverImage'],
-				['postImage'],
-				['commentImage'],
-				['replyImage'],
-			])('should create directories for image field name: %s', (name) => {
-				diskStorageDestination(
-					req,
-					{ ...mockFile, fieldname: name },
-					mockCallback
-				);
+				['empty', ''],
+				['malicious', '../malicious'],
+				['random', 'random'],
+			])(
+				'should use empty subdirectory of public for %s field name: %s',
+				(_description, fieldname) => {
+					diskStorageDestination(req, { ...mockFile, fieldname }, mockCallback);
 
-				const expectedPath = path.join(
-					__dirname,
-					`../../public/${name ? `${name}s` : ''}`
-				);
+					const expectedPath = path.join(__dirname, '../../public');
 
-				expect(mkdirSync).toHaveBeenCalledWith(expectedPath, {
-					recursive: true,
-				});
-				expect(mockCallback).toHaveBeenCalledWith(null, expectedPath);
-			});
-			it('should use empty subdirectory of public for unknown file name', () => {
-				diskStorageDestination(
-					req,
-					{ ...mockFile, fieldname: 'test-field' },
-					mockCallback
-				);
-
-				const expectedPath = path.join(__dirname, '../../public');
-
-				expect(mkdirSync).toHaveBeenCalledWith(expectedPath, {
-					recursive: true,
-				});
-				expect(mockCallback).toHaveBeenCalledWith(null, expectedPath);
-			});
+					expect(mkdirSync).toHaveBeenCalledWith(expectedPath, {
+						recursive: true,
+					});
+					expect(mockCallback).toHaveBeenCalledWith(null, expectedPath);
+				}
+			);
 		});
 
 		describe("fileStorage's filename function", () => {
@@ -119,33 +117,23 @@ describe('General Helper Functions', () => {
 				vi.clearAllMocks();
 			});
 
-			it.each([
-				['profileImage', 'image/png'],
-				['profileImage', 'image/jpg'],
-				['coverImage', 'image/png'],
-				['coverImage', 'image/jpg'],
-				['postImage', 'image/png'],
-				['postImage', 'image/jpg'],
-				['commentImage', 'image/png'],
-				['commentImage', 'image/jpg'],
-				['replyImage', 'image/png'],
-				['replyImage', 'image/jpg'],
-			])(
-				'should generate filename for fieldname: %s and mimetype: %s',
-				(name, mime) => {
-					diskStorageFilename(
-						req,
-						{ ...mockFile, fieldname: name, mimetype: mime },
-						mockCallbackFilename
-					);
+			imageFieldNames.forEach((name) => {
+				allowedFileTypes.forEach((mime) => {
+					it(`should generate filename for fieldnames: ${name} and mimetype: ${mime}`, () => {
+						diskStorageFilename(
+							req,
+							{ ...mockFile, fieldname: name, mimetype: mime },
+							mockCallbackFilename
+						);
 
-					const extension = mime.split('/')[1] ?? '';
-					expect(mockCallbackFilename).toHaveBeenLastCalledWith(
-						null,
-						`${name}-${mockFile.filename}.${extension}`
-					);
-				}
-			);
+						const extension = mime.split('/')[1] ?? '';
+						expect(mockCallbackFilename).toHaveBeenLastCalledWith(
+							null,
+							`${name}-${mockFile.filename}.${extension}`
+						);
+					});
+				});
+			});
 		});
 
 		describe("fileStorage's filefilter function", () => {
@@ -155,9 +143,8 @@ describe('General Helper Functions', () => {
 				vi.clearAllMocks();
 			});
 
-			it.each([['image/png'], ['image/jpg']])(
-				'should allow file with mimetype: %s',
-				(mime) => {
+			allowedFileTypes.forEach((mime) => {
+				it(`should allow file with mimetype: ${mime}`, () => {
 					fileFilter(
 						req,
 						{ ...mockFile, mimetype: mime },
@@ -165,8 +152,8 @@ describe('General Helper Functions', () => {
 					);
 
 					expect(mockCallbackFileFilter).toHaveBeenCalledWith(null, true);
-				}
-			);
+				});
+			});
 
 			it('should throw MulterError for invalid mimetype', () => {
 				fileFilter(
@@ -176,7 +163,10 @@ describe('General Helper Functions', () => {
 				);
 
 				expect(mockCallbackFileFilter).toHaveBeenCalledWith(
-					new MulterError('LIMIT_UNEXPECTED_FILE', mockFile.fieldname)
+					expect.objectContaining({
+						code: 'LIMIT_UNEXPECTED_FILE',
+						field: mockFile.fieldname,
+					})
 				);
 			});
 
@@ -199,9 +189,11 @@ describe('General Helper Functions', () => {
 					{ ...mockFile, size: 2 * 1024 * 1024 },
 					mockCallbackFileFilter
 				);
-
 				expect(mockCallbackFileFilter).toHaveBeenCalledWith(
-					new MulterError('LIMIT_FILE_SIZE', mockFile.fieldname)
+					expect.objectContaining({
+						code: 'LIMIT_FILE_SIZE',
+						field: mockFile.fieldname,
+					})
 				);
 			});
 		});

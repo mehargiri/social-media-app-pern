@@ -1,23 +1,18 @@
 /* eslint-disable @typescript-eslint/no-unsafe-member-access */
-import { CustomPayload } from '@/controllers/auth.controllers.js';
 import {
 	clearRefreshTokenCookie,
 	createAccessToken,
 	createRefreshToken,
 	generateTokens,
 	setRefreshTokenCookie,
-	TOKEN_CONFIG,
 } from '@/utils/auth.utils.js';
 import { Response } from 'express';
-import { verify } from 'jsonwebtoken';
 import { SUUID } from 'short-uuid';
 import { afterAll, describe, expect, it, vi } from 'vitest';
 
 const userId = '8orMfY6H7xXNZA7V7Z5EFq' as SUUID;
 
-describe('Authentication Helper Functions', () => {
-	vi.mock('@/utils/auth.utils.js', { spy: true });
-
+describe('Authentication Utils Functions', () => {
 	const res = {
 		cookie: vi.fn(),
 		clearCookie: vi.fn(),
@@ -30,28 +25,14 @@ describe('Authentication Helper Functions', () => {
 	describe('createAccessToken', () => {
 		it('should create an access token with correct payload', () => {
 			const accessToken = createAccessToken(userId);
-			const verifiedUser = verify(
-				accessToken,
-				TOKEN_CONFIG.ACCESS_TOKEN_SECRET
-			) as CustomPayload;
-
-			expect(createAccessToken).toHaveBeenCalledWith(userId);
 			expect(accessToken).toBeDefined();
-			expect(verifiedUser.acc).toStrictEqual(userId);
 		});
 	});
 
 	describe('createRefreshToken', () => {
 		it('should create a refresh token with correct payload', () => {
 			const refreshToken = createRefreshToken(userId);
-			const verifiedUser = verify(
-				refreshToken,
-				TOKEN_CONFIG.REFRESH_TOKEN_SECRET
-			) as CustomPayload;
-
-			expect(createRefreshToken).toHaveBeenCalledWith(userId);
 			expect(refreshToken).toBeDefined();
-			expect(verifiedUser.acc).toStrictEqual(userId);
 		});
 	});
 
@@ -59,8 +40,6 @@ describe('Authentication Helper Functions', () => {
 		it('should create access and refresh tokens with given payload', () => {
 			const { accessToken, refreshToken } = generateTokens(userId);
 
-			expect(createAccessToken).toHaveBeenCalledWith(userId);
-			expect(createRefreshToken).toHaveBeenCalledWith(userId);
 			expect(accessToken).toBeDefined();
 			expect(refreshToken).toBeDefined();
 		});

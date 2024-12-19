@@ -16,13 +16,16 @@ export type CustomUserFiles = Partial<
 	Record<'profileImage' | 'coverImage', Express.Multer.File[]>
 >;
 
-// export interface CustomUserUpdateRequest extends Request {
-// 	params: { id: SUUID };
-// 	body: UpdateUserType;
-// 	files?: CustomUserFiles;
-// }
-
 // Read User
+export const getMe = async (req: Request, res: Response) => {
+	const { userId: id } = req;
+	validateSUUID(id);
+	const me = await findUserById({ id: id as SUUID });
+	if (!me) throw Error('User does not exist', { cause: 404 });
+	res.json(me);
+	return;
+};
+
 export const getUser = async (req: Request<{ id: SUUID }>, res: Response) => {
 	const { id } = req.params;
 	validateSUUID(id);

@@ -1,6 +1,7 @@
 import { updateUserById, userTokenExists } from '@/services/user.services.js';
 import {
 	clearRefreshTokenCookie,
+	CONSTANT_NAMES,
 	generateTokens,
 	setRefreshTokenCookie,
 } from '@/utils/auth.utils.js';
@@ -15,17 +16,21 @@ import {
 	validateCredentials,
 } from './auth.controllers.helpers.js';
 
+export interface CookieType {
+	[CONSTANT_NAMES.cookieName]?: string;
+}
+
 export interface CustomLoginRequest extends Request {
 	body: LoginUserType;
-	cookies: { tk?: string };
+	cookies: CookieType;
 }
 
 export interface CustomCookieRequest extends Request {
-	cookies: { tk?: string };
+	cookies: CookieType;
 }
 
 export interface CustomPayload extends JwtPayload {
-	acc: SUUID;
+	[CONSTANT_NAMES.payloadName]: SUUID;
 }
 
 // Login

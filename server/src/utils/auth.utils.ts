@@ -11,18 +11,31 @@ export const TOKEN_CONFIG = {
 	REFRESH_TOKEN_SECRET: createSecretKey(Buffer.from(env.REFRESH_TOKEN_SECRET)),
 } as const;
 
+export const CONSTANT_NAMES = {
+	cookieName: 'tk',
+	payloadName: 'acc',
+} as const;
+
 // Helper functions
 export const createAccessToken = (userId: SUUID) => {
-	const token = sign({ acc: userId }, TOKEN_CONFIG.ACCESS_TOKEN_SECRET, {
-		expiresIn: TOKEN_CONFIG.ACCESS_TOKEN_EXPIRY,
-	});
+	const token = sign(
+		{ PAYLOAD_NAME: userId },
+		TOKEN_CONFIG.ACCESS_TOKEN_SECRET,
+		{
+			expiresIn: TOKEN_CONFIG.ACCESS_TOKEN_EXPIRY,
+		}
+	);
 	return token;
 };
 
 export const createRefreshToken = (userId: SUUID) => {
-	const token = sign({ acc: userId }, TOKEN_CONFIG.REFRESH_TOKEN_SECRET, {
-		expiresIn: TOKEN_CONFIG.REFRESH_TOKEN_EXPIRY,
-	});
+	const token = sign(
+		{ PAYLOAD_NAME: userId },
+		TOKEN_CONFIG.REFRESH_TOKEN_SECRET,
+		{
+			expiresIn: TOKEN_CONFIG.REFRESH_TOKEN_EXPIRY,
+		}
+	);
 
 	return token;
 };
@@ -34,7 +47,7 @@ export const generateTokens = (userId: SUUID) => {
 };
 
 export const setRefreshTokenCookie = (res: Response, refreshToken: string) => {
-	res.cookie('tk', refreshToken, {
+	res.cookie(CONSTANT_NAMES.cookieName, refreshToken, {
 		httpOnly: true,
 		sameSite: 'strict',
 		secure: process.env['NODE_ENV'] === 'production',
@@ -43,7 +56,7 @@ export const setRefreshTokenCookie = (res: Response, refreshToken: string) => {
 };
 
 export const clearRefreshTokenCookie = (res: Response) => {
-	res.clearCookie('tk', {
+	res.clearCookie(CONSTANT_NAMES.cookieName, {
 		httpOnly: true,
 		sameSite: 'strict',
 		secure: process.env['NODE_ENV'] === 'production',

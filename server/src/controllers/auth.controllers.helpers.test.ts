@@ -25,6 +25,12 @@ import {
 	validateCredentials,
 } from './auth.controllers.helpers.js';
 
+const flushPromises = async () => {
+	await new Promise((resolve) => {
+		process.nextTick(resolve);
+	});
+};
+
 describe('Auth Controller Helper Functions', () => {
 	vi.mock('@/services/user.services.js', () => ({
 		getUserDataForLogin: vi.fn(),
@@ -87,7 +93,6 @@ describe('Auth Controller Helper Functions', () => {
 		describe('validateCredentials Function', () => {
 			beforeEach(() => {
 				(getUserDataForLogin as Mock).mockResolvedValue(userData);
-				vi.clearAllMocks();
 			});
 			it('should throw Error when user email cannot be found', async () => {
 				(getUserDataForLogin as Mock).mockResolvedValue(undefined);
@@ -173,9 +178,6 @@ describe('Auth Controller Helper Functions', () => {
 		const decodedPayload = { acc: userData.id };
 
 		describe('handleRefreshTokenReuse Function', () => {
-			beforeEach(() => {
-				vi.clearAllMocks();
-			});
 			it('should call res.sendStatus when error is encountered while verifying refresh token', () => {
 				(jwtVerify as Mock).mockImplementation(
 					(_token, _secret, callback: VerifyCallback) => {
@@ -215,9 +217,7 @@ describe('Auth Controller Helper Functions', () => {
 
 				handleRefreshTokenReuse(oldRefreshToken, res as unknown as Response);
 
-				await new Promise((resolve) => {
-					process.nextTick(resolve);
-				});
+				await flushPromises();
 
 				expect(updateUserById).toHaveBeenCalledWith({
 					id: userData.id,
@@ -237,7 +237,6 @@ describe('Auth Controller Helper Functions', () => {
 					accessToken,
 					refreshToken: newRefreshToken,
 				});
-				vi.clearAllMocks();
 			});
 
 			it('should log a message when error is encountered while verifying refresh token', () => {
@@ -259,9 +258,7 @@ describe('Auth Controller Helper Functions', () => {
 					res as unknown as Response
 				);
 
-				await new Promise((resolve) => {
-					process.nextTick(resolve);
-				});
+				await flushPromises();
 
 				expect(updateUserById).toHaveBeenCalledWith({
 					id: userData.id,
@@ -277,9 +274,7 @@ describe('Auth Controller Helper Functions', () => {
 					res as unknown as Response
 				);
 
-				await new Promise((resolve) => {
-					process.nextTick(resolve);
-				});
+				await flushPromises();
 
 				expect(res.sendStatus).toHaveBeenCalledWith(403);
 			});
@@ -332,9 +327,7 @@ describe('Auth Controller Helper Functions', () => {
 					res as unknown as Response
 				);
 
-				await new Promise((resolve) => {
-					process.nextTick(resolve);
-				});
+				await flushPromises();
 
 				expect(updateUserById).toHaveBeenCalledWith({
 					id: userData.id,
@@ -356,9 +349,7 @@ describe('Auth Controller Helper Functions', () => {
 					res as unknown as Response
 				);
 
-				await new Promise((resolve) => {
-					process.nextTick(resolve);
-				});
+				await flushPromises();
 
 				expect(setRefreshTokenCookie).toHaveBeenCalledWith(
 					res,

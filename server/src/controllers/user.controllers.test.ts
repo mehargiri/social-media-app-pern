@@ -14,6 +14,7 @@ import { afterAll, describe, expect, it, Mock, vi } from 'vitest';
 import {
 	CustomUserFiles,
 	deleteUser,
+	getMe,
 	getUser,
 	getUsersByName,
 	registerUser,
@@ -32,7 +33,7 @@ const mockUser: Awaited<ReturnType<typeof findUserById>> = {
 	bio: 'person amazing bio',
 	currentCity: 'some city',
 	hometown: 'some city',
-	friendships: Array.from({ length: 3 }, () => ({
+	friends: Array.from({ length: 3 }, () => ({
 		status: 'unfriend',
 		friend: {
 			id: 'id-SUUID' as SUUID,
@@ -149,7 +150,7 @@ describe('User Controller Functions', () => {
 					req as unknown as Request<{ id: SUUID }>,
 					res as unknown as Response
 				)
-			).rejects.toThrow(new Error('User does not exist', { cause: 404 }));
+			).rejects.toThrow(Error('User does not exist', { cause: 404 }));
 		});
 
 		it('should call res.json when user exists', async () => {
@@ -163,6 +164,23 @@ describe('User Controller Functions', () => {
 			expect(res.json).toHaveBeenCalledWith(mockUser);
 		});
 	});
+	describe('getMe function', () => {
+		it('should throw Error when user is not found', async () => {
+			(findUserById as Mock).mockResolvedValue(undefined);
+
+			await expect(
+				getMe(req as unknown as Request, res as unknown as Response)
+			).rejects.toThrow(Error('User does not exist', { cause: 404 }));
+		});
+
+		it('should call res.json when user exists', async () => {
+			(findUserById as Mock).mockResolvedValue(mockUser);
+
+			await getMe(req as unknown as Request, res as unknown as Response);
+
+			expect(res.json).toHaveBeenCalledWith(mockUser);
+		});
+	});
 
 	describe('getUsersByName function', () => {
 		it('should throw Error when name is missing', async () => {
@@ -172,7 +190,7 @@ describe('User Controller Functions', () => {
 					req as unknown as Request<{ name: string }>,
 					res as unknown as Response
 				)
-			).rejects.toThrow(new Error('Name is required', { cause: 400 }));
+			).rejects.toThrow(Error('Name is required', { cause: 400 }));
 		});
 
 		it('should throw Error when user with the name does not exist', async () => {
@@ -183,9 +201,7 @@ describe('User Controller Functions', () => {
 					req as unknown as Request<{ name: string }>,
 					res as unknown as Response
 				)
-			).rejects.toThrow(
-				new Error('No user with the name exists', { cause: 404 })
-			);
+			).rejects.toThrow(Error('No user with the name exists', { cause: 404 }));
 		});
 
 		it('should call res.json with array of users on success', async () => {
@@ -209,10 +225,10 @@ describe('User Controller Functions', () => {
 					req as unknown as Request<never, never, RegisterUserType>,
 					res as unknown as Response
 				)
-			).rejects.toThrow(new Error('Registration failed', { cause: 409 }));
+			).rejects.toThrow(Error('Registration failed', { cause: 409 }));
 		});
 
-		it('should call res.status with HTTP 201 and res.json with id of newUser on success', async () => {
+		it('should call res.status with HTTP 201 and res.json with id of ser on success', async () => {
 			(createUser as Mock).mockResolvedValue({ id: mockUser.id });
 
 			await registerUser(
@@ -234,7 +250,7 @@ describe('User Controller Functions', () => {
 					req as unknown as Request<{ id: SUUID }>,
 					res as unknown as Response
 				)
-			).rejects.toThrow(new Error('User does not exist', { cause: 404 }));
+			).rejects.toThrow(Error('User does not exist', { cause: 404 }));
 		});
 
 		it('should call res.json with a message on success', async () => {
@@ -260,7 +276,7 @@ describe('User Controller Functions', () => {
 					req as unknown as Request<{ id: SUUID }, never, UpdateUserType>,
 					res as unknown as Response
 				)
-			).rejects.toThrow(new Error('User does not exist', { cause: 404 }));
+			).rejects.toThrow(Error('User does not exist', { cause: 404 }));
 		});
 
 		it('should throw Error when updating user fails', async () => {
@@ -272,7 +288,7 @@ describe('User Controller Functions', () => {
 					req as unknown as Request<{ id: SUUID }, never, UpdateUserType>,
 					res as unknown as Response
 				)
-			).rejects.toThrow(new Error('User update failed', { cause: 422 }));
+			).rejects.toThrow(Error('User update failed', { cause: 422 }));
 		});
 
 		it('should call res.json on success', async () => {

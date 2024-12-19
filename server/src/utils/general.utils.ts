@@ -49,8 +49,9 @@ export const diskStorageDestination = (
 	callback: DestinationCallback
 ) => {
 	const baseDir = path.join(__dirname, '../../public');
-	const subDir = imageFieldNames.includes(file.fieldname)
-		? `${file.fieldname}s`
+	const sanitizedFieldName = file.fieldname.replace(/[^a-zA-Z0-9]/g, '');
+	const subDir = imageFieldNames.includes(sanitizedFieldName)
+		? `${sanitizedFieldName}s`
 		: '';
 
 	const uploadPath = path.join(baseDir, subDir);
