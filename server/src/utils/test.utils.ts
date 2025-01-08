@@ -4,6 +4,7 @@ import { user, userGenderEnum } from '@/db/schema/user.js';
 import { faker } from '@faker-js/faker';
 import { hash } from 'argon2';
 import { eq } from 'drizzle-orm';
+import { SUUID } from 'short-uuid';
 import type { Readable } from 'stream';
 import { convertToSUUID, convertToUUID } from './general.utils.js';
 
@@ -27,6 +28,8 @@ export const getTestUserId = async (email: string) => {
 
 export const samplePassword = 'Password123!';
 export const sampleEmail = 'test@email.com';
+
+export const sampleSUUID = '73WakrfVbNJBaAmhQtEeDv' as SUUID;
 
 export const testUser = {
 	firstName: 'John',

@@ -1,6 +1,7 @@
 import { createAccessToken } from '@/utils/auth.utils.js';
+import { sampleSUUID } from '@/utils/test.utils.js';
 import { NextFunction, Request, Response } from 'express';
-import { generate, SUUID } from 'short-uuid';
+import { SUUID } from 'short-uuid';
 import { describe, expect, it, vi } from 'vitest';
 import tokenHandler from './tokenHandler.middlewares.js';
 
@@ -56,7 +57,7 @@ describe('tokenHandler Middleware Function', () => {
 	});
 
 	it('should set req.userId and call next if token verification succeeds', () => {
-		const token = createAccessToken(generate());
+		const token = createAccessToken(sampleSUUID);
 		req = {
 			headers: {
 				authorization: `Bearer ${token}`,

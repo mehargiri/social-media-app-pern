@@ -13,10 +13,11 @@ import {
 	createTestUser,
 	createTestWork,
 	samplePassword,
+	sampleSUUID,
 } from '@/utils/test.utils.js';
 import { RegisterUserType, UpdateUserType } from '@/zod-schemas/user.js';
 import { Request, Response } from 'express';
-import { generate, SUUID } from 'short-uuid';
+import { SUUID } from 'short-uuid';
 import { afterAll, beforeEach, describe, expect, it, Mock, vi } from 'vitest';
 import {
 	CustomUserFiles,
@@ -29,26 +30,27 @@ import {
 } from './user.controllers.js';
 
 const testUser = createTestUser();
+testUser.password = samplePassword;
 const testCollege = createTestCollege();
 const testWork = createTestWork();
 const testHighSchool = createTestHighSchool();
 
 const mockUser = {
 	...testUser,
-	id: generate(),
+	id: sampleSUUID,
 	profilePic: 'localhost:8000/sampleImage',
 	coverPic: 'localhost:8000/sampleImage',
 	friends: Array.from({ length: 3 }, () => ({
 		status: 'unfriend',
 		friend: {
-			id: 'id-SUUID' as SUUID,
+			id: sampleSUUID,
 			fullName: 'Jane Doe',
 			profilePic: 'localhost:8000/sampleImage',
 		},
 	})),
-	college: { ...testCollege, id: generate() },
-	work: { ...testWork, id: generate() },
-	highSchool: { ...testHighSchool, id: generate() },
+	college: { ...testCollege, id: sampleSUUID },
+	work: { ...testWork, id: sampleSUUID },
+	highSchool: { ...testHighSchool, id: sampleSUUID },
 };
 
 const mockUsers = Array.from({ length: 2 }, () => ({ ...mockUser }));
