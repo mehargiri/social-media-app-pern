@@ -1,16 +1,24 @@
 import {
 	deleteUser,
+	getMe,
 	getUser,
 	getUsersByName,
 	registerUser,
 	updateUser,
 } from '@/controllers/user.controllers.js';
-import validateData from '@/middlewares/validateData.js';
-import verifyJWT from '@/middlewares/verifyJWT.js';
-import { fileFilter, fileStorage, maxFileSize } from '@/utils/general.utils.js';
+import tokenHandler from '@/middlewares/tokenHandler.middlewares.js';
+import validateData from '@/middlewares/validateData.middlewares.js';
+import {
+	fileFilter,
+	fileStorage,
+	imageFieldNames,
+	maxFileSize,
+} from '@/utils/general.utils.js';
 import { registerUserSchema, updateUserSchema } from '@/zod-schemas/user.js';
+import { Router } from 'express';
 import multer from 'multer';
-import router from './auth.routes.js';
+
+const router = Router();
 
 const upload = multer({
 	storage: fileStorage,
@@ -18,19 +26,19 @@ const upload = multer({
 	limits: { fieldSize: maxFileSize },
 });
 
-router.get('/:id', verifyJWT, getUser);
-router.get('/name/:name', verifyJWT, getUsersByName);
+router.get('/', tokenHandler, getUsersByName);
+router.get('/me', tokenHandler, getMe);
+router.get('/:id', tokenHandler, getUser);
 router.post('/register', validateData(registerUserSchema), registerUser);
 router.patch(
 	'/:id',
-	verifyJWT,
-	upload.fields([
-		{ name: 'profileImage', maxCount: 1 },
-		{ name: 'coverImage', maxCount: 1 },
-	]),
+	tokenHandler,
+	upload.fields(
+		imageFieldNames.map((fieldName) => ({ name: fieldName, maxCount: 1 }))
+	),
 	validateData(updateUserSchema),
 	updateUser
 );
-router.delete('/:id', verifyJWT, deleteUser);
+router.delete('/:id', tokenHandler, deleteUser);
 
 export default router;

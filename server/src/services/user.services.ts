@@ -23,7 +23,7 @@ export const findUserById = async (data: { id: SUUID }) => {
 		},
 		where: eq(user.id, convertToUUID(data.id)),
 		with: {
-			friendships: {
+			friends: {
 				columns: {
 					status: true,
 				},
@@ -56,7 +56,7 @@ export const findUserById = async (data: { id: SUUID }) => {
 	let foundUserWithSUUID;
 
 	if (foundUser) {
-		const { college, work, highSchool, friendships, ...user } = foundUser;
+		const { college, work, highSchool, friends, ...user } = foundUser;
 
 		foundUserWithSUUID = {
 			...user,
@@ -66,7 +66,7 @@ export const findUserById = async (data: { id: SUUID }) => {
 			highSchool: highSchool
 				? { ...highSchool, id: convertToSUUID(highSchool.id) }
 				: null,
-			friendships: friendships.map((friendItem) => ({
+			friends: friends.map((friendItem) => ({
 				...friendItem,
 				friend: {
 					...friendItem.friend,
@@ -86,7 +86,7 @@ export const findUsersByName = async (data: { name: string }) => {
 			profilePic: user.profilePic,
 		})
 		.from(user)
-		.where(ilike(user.fullName, data.name))
+		.where(ilike(user.fullName, `${data.name}%`))
 		.limit(5)
 		.orderBy(user.fullName);
 
@@ -112,10 +112,11 @@ export const createUser = async (data: RegisterUserType) => {
 
 // Update User
 export const updateUserById = async (data: UpdateUserType) => {
+	const { id: userId, ...goodData } = data;
 	const updatedUser = await db
 		.update(user)
-		.set(data)
-		.where(eq(user.id, convertToUUID(data.id)))
+		.set(goodData)
+		.where(eq(user.id, convertToUUID(userId)))
 		.returning({ id: user.id });
 
 	const updatedUserWithSUUID = updatedUser.map((user) => ({
@@ -143,7 +144,7 @@ export const deleteUserById = async (data: { id: SUUID }) => {
 // User Confirmation for Update Action
 export const userExists = async (data: { id: SUUID }) => {
 	const isUser = await db.query.user.findFirst({
-		where: eq(user.id, data.id),
+		where: eq(user.id, convertToUUID(data.id)),
 		columns: { id: true },
 	});
 

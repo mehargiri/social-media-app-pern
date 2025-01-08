@@ -4,7 +4,6 @@
 		"resolveFullPaths": true,
 		"verbose": false
 	},
-	"exclude": ["eslint.config.js"],
 	"compilerOptions": {
 		/* Modules */
 		// "module": "NodeNext" /* Specify what module code is generated. */,
@@ -21,7 +20,6 @@
 		/* Type Checking */
 		"strict": true /* Enable all strict type-checking options. */,
 		"skipLibCheck": true /* Skip type checking all .d.ts files. */,
-		"exactOptionalPropertyTypes": false,
-		"typeRoots": ["./src/types.d.ts"]
+		"exactOptionalPropertyTypes": false
 	}
 }

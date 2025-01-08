@@ -43,4 +43,8 @@ export const likeRelations = relations(like, ({ one }) => ({
 		fields: [like.commentId],
 		references: [comment.id],
 	}),
+	reply: one(reply, {
+		fields: [like.replyId],
+		references: [reply.id],
+	}),
 }));

@@ -9,12 +9,19 @@ import {
 	uuid,
 } from 'drizzle-orm/pg-core';
 import { timestamps } from './columns.helpers.js';
-import { college, friendship, highSchool, post, work } from './index.js';
+import {
+	college,
+	friendship,
+	highSchool,
+	notificationUser,
+	post,
+	work,
+} from './index.js';
 
 export const userGenderEnum = pgEnum('gender', ['male', 'female', 'other']);
 
 export const user = pgTable(
-	'user',
+	'user_',
 	{
 		id: uuid().primaryKey().defaultRandom(),
 		firstName: text().notNull(),
@@ -40,9 +47,11 @@ export const user = pgTable(
 );
 
 export const userRelations = relations(user, ({ many, one }) => ({
-	friendships: many(friendship),
+	friends: many(friendship, { relationName: 'friends' }),
+	friendsOf: many(friendship, { relationName: 'friendsOf' }),
 	posts: many(post),
 	work: one(work),
 	college: one(college),
 	highSchool: one(highSchool),
+	notifications: many(notificationUser),
 }));

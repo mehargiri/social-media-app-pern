@@ -13,14 +13,14 @@ import {
 } from '@/utils/auth.utils.js';
 import { verify } from 'argon2';
 import { Response } from 'express';
-import { verify as jwtVerify } from 'jsonwebtoken';
+import jwt from 'jsonwebtoken';
 import { CustomPayload } from './auth.controllers.js';
 
 // Login Helper functions
 export const validateCredentials = async (email: string, password: string) => {
 	const user = await getUserDataForLogin({ email });
 	if (!user || !(await verify(user.password, password))) {
-		throw Error('Invalid credentials', { cause: 401 });
+		throw Error('Invalid Credentials', { cause: 401 });
 	}
 	return user;
 };
@@ -51,13 +51,12 @@ export const handleRefreshTokenReuse = (
 	refreshToken: string,
 	res: Response
 ) => {
-	jwtVerify(
+	jwt.verify(
 		refreshToken,
 		TOKEN_CONFIG.REFRESH_TOKEN_SECRET,
 		async (err, decoded) => {
 			if (err) {
-				res.sendStatus(401);
-				return;
+				return void res.sendStatus(403);
 			}
 
 			console.info('Attempted refresh token reuse!');
@@ -82,12 +81,12 @@ export const processOldRefreshTokenForNew = (
 	refreshTokenArray: string[],
 	res: Response
 ) => {
-	jwtVerify(
+	jwt.verify(
 		refreshToken,
 		TOKEN_CONFIG.REFRESH_TOKEN_SECRET,
 		async (err, decoded) => {
 			if (err) {
-				console.info('Expired refresh token');
+				console.info('Expired refresh token!');
 				await updateUserById({
 					id: user.id,
 					refreshToken: [...refreshTokenArray],
@@ -95,8 +94,7 @@ export const processOldRefreshTokenForNew = (
 			}
 
 			if (err || user.id !== (decoded as CustomPayload).acc) {
-				res.sendStatus(403);
-				return;
+				return void res.sendStatus(403);
 			}
 
 			const { accessToken, refreshToken: newRefreshToken } = generateTokens(
@@ -110,8 +108,7 @@ export const processOldRefreshTokenForNew = (
 
 			setRefreshTokenCookie(res, newRefreshToken);
 
-			res.json({ accessToken });
-			return;
+			return void res.json({ accessToken });
 		}
 	);
 };

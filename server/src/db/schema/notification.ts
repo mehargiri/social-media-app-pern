@@ -1,7 +1,7 @@
 import { relations } from 'drizzle-orm';
-import { boolean, pgEnum, pgTable, uuid } from 'drizzle-orm/pg-core';
+import { pgEnum, pgTable, uuid } from 'drizzle-orm/pg-core';
 import { timestamps } from './columns.helpers.js';
-import { comment, post, reply, user } from './index.js';
+import { comment, notificationUser, post, reply, user } from './index.js';
 
 export const notificationTypeEnum = pgEnum('notification_type', [
 	'friendRequest',
@@ -19,7 +19,6 @@ export const notification = pgTable('notification', {
 	postId: uuid().references(() => post.id, { onDelete: 'cascade' }),
 	commentId: uuid().references(() => comment.id, { onDelete: 'cascade' }),
 	replyId: uuid().references(() => reply.id, { onDelete: 'cascade' }),
-	read: boolean().default(false),
 	type: notificationTypeEnum(),
 	...timestamps,
 });
@@ -39,6 +38,6 @@ export const notificationRelations = relations(
 			fields: [notification.replyId],
 			references: [reply.id],
 		}),
-		receivers: many(user),
+		receivers: many(notificationUser),
 	})
 );

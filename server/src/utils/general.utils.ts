@@ -23,13 +23,7 @@ export const convertToSUUID = (id: string) => {
 // Multer
 export const maxFileSize = 1 * 1024 * 1024; // 1 MB
 export const allowedFileTypes = ['image/png', 'image/jpg']; // only png and jpg allowed
-export const imageFieldNames = [
-	'profileImage',
-	'coverImage',
-	'postImage',
-	'commentImage',
-	'replyImage',
-];
+export const imageFieldNames = ['profileImage', 'coverImage'];
 
 export type DestinationCallback = (
 	error: Error | null,
@@ -48,7 +42,7 @@ export const diskStorageDestination = (
 	file: Express.Multer.File,
 	callback: DestinationCallback
 ) => {
-	const baseDir = path.join(__dirname, '../../public');
+	const baseDir = path.join(__dirname, '../assets');
 	const sanitizedFieldName = file.fieldname.replace(/[^a-zA-Z0-9]/g, '');
 	const subDir = imageFieldNames.includes(sanitizedFieldName)
 		? `${sanitizedFieldName}s`
@@ -65,7 +59,13 @@ export const diskStorageFilename = (
 	callback: FileNameCallBack
 ) => {
 	const extension = file.mimetype.split('/')[1] ?? '';
-	callback(null, `${file.fieldname}-${file.filename}.${extension}`);
+	const sanitizedOriginalFilename = file.originalname
+		.replace(/[^a-zA-Z0-9-_. ]/g, '')
+		.split('.')[0];
+	callback(
+		null,
+		`${file.fieldname}-${sanitizedOriginalFilename ?? ''}.${extension}`
+	);
 };
 
 export const fileStorage = multer.diskStorage({

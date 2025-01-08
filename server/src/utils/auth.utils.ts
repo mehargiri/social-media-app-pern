@@ -1,7 +1,7 @@
 import env from '@/env.js';
 import { createSecretKey } from 'crypto';
 import { Response } from 'express';
-import { sign } from 'jsonwebtoken';
+import jwt from 'jsonwebtoken';
 import { SUUID } from 'short-uuid';
 
 export const TOKEN_CONFIG = {
@@ -18,8 +18,8 @@ export const CONSTANT_NAMES = {
 
 // Helper functions
 export const createAccessToken = (userId: SUUID) => {
-	const token = sign(
-		{ PAYLOAD_NAME: userId },
+	const token = jwt.sign(
+		{ [CONSTANT_NAMES.payloadName]: userId },
 		TOKEN_CONFIG.ACCESS_TOKEN_SECRET,
 		{
 			expiresIn: TOKEN_CONFIG.ACCESS_TOKEN_EXPIRY,
@@ -29,8 +29,8 @@ export const createAccessToken = (userId: SUUID) => {
 };
 
 export const createRefreshToken = (userId: SUUID) => {
-	const token = sign(
-		{ PAYLOAD_NAME: userId },
+	const token = jwt.sign(
+		{ [CONSTANT_NAMES.payloadName]: userId },
 		TOKEN_CONFIG.REFRESH_TOKEN_SECRET,
 		{
 			expiresIn: TOKEN_CONFIG.REFRESH_TOKEN_EXPIRY,

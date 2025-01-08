@@ -3,7 +3,7 @@ import {
 	logoutUser,
 	refreshToken,
 } from '@/controllers/auth.controllers.js';
-import validateData from '@/middlewares/validateData.js';
+import validateData from '@/middlewares/validateData.middlewares.js';
 import { loginUserSchema } from '@/zod-schemas/user.js';
 import { Router } from 'express';
 

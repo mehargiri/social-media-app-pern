@@ -1,17 +1,14 @@
-/* eslint-disable @typescript-eslint/no-unsafe-assignment */
+import { sampleEmail, samplePassword } from '@/utils/test.utils.js';
 import { loginUserSchema } from '@/zod-schemas/user.js';
 import { NextFunction, Request, Response } from 'express';
 import { afterAll, beforeEach, describe, expect, it, vi } from 'vitest';
-import validateData from './validateData.js';
+import validateData from './validateData.middlewares.js';
 
 describe('validateData Middleware Function', () => {
-	const testEmail = 'test@email.com';
-	const testPassword = 'Password123!';
-
 	const req = {
 		body: {
-			email: testEmail,
-			password: testPassword,
+			email: sampleEmail,
+			password: samplePassword,
 		},
 	};
 
@@ -22,9 +19,14 @@ describe('validateData Middleware Function', () => {
 
 	const next = vi.fn() as NextFunction;
 
+	const callTestFn = () => {
+		const middleware = validateData(loginUserSchema);
+		middleware(req as unknown as Request, res as unknown as Response, next);
+	};
+
 	beforeEach(() => {
-		req.body.email = testEmail;
-		req.body.password = testPassword;
+		req.body.email = sampleEmail;
+		req.body.password = samplePassword;
 	});
 
 	afterAll(() => {
@@ -32,8 +34,7 @@ describe('validateData Middleware Function', () => {
 	});
 
 	it('should call next when the data validation passes', () => {
-		const middleware = validateData(loginUserSchema);
-		middleware(req as unknown as Request, res as unknown as Response, next);
+		callTestFn();
 
 		expect(next).toHaveBeenCalled();
 	});
@@ -42,15 +43,14 @@ describe('validateData Middleware Function', () => {
 		req.body.email = 'testemail.com';
 		req.body.password = '';
 
-		const middleware = validateData(loginUserSchema);
-		middleware(req as unknown as Request, res as unknown as Response, next);
+		callTestFn();
 
 		expect(res.status).toHaveBeenCalledWith(400);
 		expect(res.json).toHaveBeenCalledWith({
 			error: expect.arrayContaining([
 				'email: Email must be valid',
 				'password: Password is required',
-			]),
+			]) as string[],
 		});
 	});
 
@@ -60,9 +60,8 @@ describe('validateData Middleware Function', () => {
 			throw error;
 		});
 
-		const middleware = validateData(loginUserSchema);
 		expect(() => {
-			middleware(req as unknown as Request, res as unknown as Response, next);
+			callTestFn();
 		}).toThrow(error);
 	});
 });

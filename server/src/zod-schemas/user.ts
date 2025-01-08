@@ -21,7 +21,8 @@ export const insertUserSchema = createInsertSchema(user, {
 			.min(1, 'Last Name is required')
 			.max(260, 'Last Name cannot be more than 260 characters')
 			.trim(),
-	email: (schema) => schema.email('Email must be valid').trim(),
+	email: (schema) =>
+		schema.email('Email must be valid').min(1, 'Email is required').trim(),
 	password: (schema) =>
 		schema
 			.min(8, 'Password is required and must be minimum of 8 characters')
@@ -36,11 +37,22 @@ export const insertUserSchema = createInsertSchema(user, {
 			'Phone number must be in format XXX-XXX-XXXX'
 		),
 	birthday: (schema) =>
-		schema.refine(
-			(value) => !isNaN(new Date(value).getTime()),
-			'Birthday must be valid date in YYYY-MM-DD format'
-		),
-}).omit({ createdAt: true, updatedAt: true, refreshToken: true });
+		schema
+			.regex(
+				/^\d{4}-\d{2}-\d{2}$/,
+				'Birthday must be valid date in YYYY-MM-DD format'
+			)
+			.refine(
+				(value) => !isNaN(new Date(value).getTime()),
+				'Birthday must be valid date in YYYY-MM-DD format'
+			),
+}).omit({
+	id: true,
+	createdAt: true,
+	updatedAt: true,
+	refreshToken: true,
+	confirmedEmail: true,
+});
 
 // Schemas for different CRUD actions
 export const loginUserSchema = createSelectSchema(user, {
@@ -52,20 +64,16 @@ export const loginUserSchema = createSelectSchema(user, {
 	password: true,
 });
 
-export const registerUserSchema = insertUserSchema.omit({
-	id: true,
-	confirmedEmail: true,
-});
+export const registerUserSchema = insertUserSchema;
 
-export const updateUserSchema = createUpdateSchema(user)
-	.omit({ createdAt: true })
-	.required({ id: true });
+export const updateUserSchema = createUpdateSchema(user).omit({
+	id: true,
+	createdAt: true,
+});
 
 // Types for different CRUD actions
 export type RegisterUserType = typeof registerUserSchema._type;
 
 export type LoginUserType = typeof loginUserSchema._type;
 
-export type UpdateUserType = Omit<typeof updateUserSchema._type, 'id'> & {
-	id: SUUID;
-};
+export type UpdateUserType = typeof updateUserSchema._type & { id: SUUID };

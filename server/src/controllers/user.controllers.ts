@@ -22,8 +22,7 @@ export const getMe = async (req: Request, res: Response) => {
 	validateSUUID(id);
 	const me = await findUserById({ id: id as SUUID });
 	if (!me) throw Error('User does not exist', { cause: 404 });
-	res.json(me);
-	return;
+	return void res.json(me);
 };
 
 export const getUser = async (req: Request<{ id: SUUID }>, res: Response) => {
@@ -31,23 +30,21 @@ export const getUser = async (req: Request<{ id: SUUID }>, res: Response) => {
 	validateSUUID(id);
 	const user = await findUserById({ id });
 	if (!user) throw Error('User does not exist', { cause: 404 });
-	res.json(user);
-	return;
+	return void res.json(user);
 };
 
 export const getUsersByName = async (
-	req: Request<{ name: string }>,
+	req: Request<never, never, never, { name: string }>,
 	res: Response
 ) => {
-	const { name } = req.params;
+	const { name } = req.query;
 	if (!name) throw Error('Name is required', { cause: 400 });
 
 	const users = await findUsersByName({ name });
 	if (users.length === 0)
 		throw Error('No user with the name exists', { cause: 404 });
 
-	res.json(users);
-	return;
+	return void res.json(users);
 };
 
 // Create User
@@ -59,15 +56,13 @@ export const registerUser = async (
 	// Hash the password
 	const hashedPassword = await argon.hash(password);
 
-	const newUser = await createUser({ ...data, password: hashedPassword });
-	if (!newUser) throw Error('Registration failed', { cause: 409 });
-	res.status(201).json(newUser);
-	return;
+	await createUser({ ...data, password: hashedPassword });
+	return void res.sendStatus(201);
 };
 
 // Update User
 export const updateUser = async (
-	req: Request<{ id: SUUID }, never, UpdateUserType> & {
+	req: Request<{ id: SUUID }, never, Omit<UpdateUserType, 'id'>> & {
 		files?: CustomUserFiles;
 	},
 	res: Response
@@ -85,14 +80,13 @@ export const updateUser = async (
 
 	const updatedUser = await updateUserById({
 		...req.body,
+		id,
 		profilePic: profileImage ? profileImage[0]?.path : '',
 		coverPic: coverImage ? coverImage[0]?.path : '',
+		updatedAt: new Date(),
 	});
 
-	if (!updatedUser) throw Error('User update failed', { cause: 422 });
-
-	res.json(updatedUser);
-	return;
+	return void res.json(updatedUser);
 };
 
 // Delete User
@@ -106,6 +100,5 @@ export const deleteUser = async (
 	const user = await deleteUserById({ id });
 	if (!user) throw Error('User does not exist', { cause: 404 });
 
-	res.json({ message: 'User deleted successfully' });
-	return;
+	return void res.json({ message: 'User deleted successfully' });
 };

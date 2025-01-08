@@ -8,7 +8,7 @@ export default defineConfig({
 		coverage: {
 			reporter: ['text', 'json', 'html'],
 		},
-		reporters: 'verbose',
+		// reporters: 'verbose',
 		exclude: [
 			'**/db-data/**',
 			'**/node_modules/**',

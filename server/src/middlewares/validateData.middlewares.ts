@@ -14,8 +14,7 @@ export default function (schema: AnyZodObject) {
 							typeof issue.path[0] === 'string' ? issue.path[0] : 'Unknown-path'
 						}: ${issue.message}`
 				);
-				res.status(400).json({ error: message });
-				return;
+				return void res.status(400).json({ error: message });
 			} else {
 				throw error;
 			}

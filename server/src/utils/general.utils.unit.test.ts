@@ -1,4 +1,8 @@
-/* eslint-disable @typescript-eslint/no-unused-vars */
+import { Request } from 'express';
+import { mkdirSync } from 'fs';
+import path from 'path';
+import short, { SUUID } from 'short-uuid';
+import { afterAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
 	allowedFileTypes,
 	convertToSUUID,
@@ -8,16 +12,11 @@ import {
 	fileFilter,
 	imageFieldNames,
 	validateSUUID,
-} from '@/utils/general.utils.js';
-import { Request } from 'express';
-import { mkdirSync } from 'fs';
-import path from 'path';
-import short, { SUUID } from 'short-uuid';
-import { afterAll, beforeEach, describe, expect, it, vi } from 'vitest';
+} from './general.utils.js';
 
 describe('General Utils Functions', () => {
 	vi.mock('fs', () => ({
-		mkdirSync: vi.fn().mockImplementation((_path, _options) => true),
+		mkdirSync: vi.fn().mockImplementation(() => true),
 	}));
 
 	afterAll(() => {
@@ -60,7 +59,7 @@ describe('General Utils Functions', () => {
 	describe('Multer Functions', () => {
 		const mockCallback = vi.fn();
 		const mockFile = {
-			filename: 'test-file',
+			originalname: 'test-file',
 			fieldname: 'profileImage',
 			mimetype: 'image/jpeg',
 		} as unknown as Express.Multer.File;
@@ -81,7 +80,7 @@ describe('General Utils Functions', () => {
 
 					const expectedPath = path.join(
 						__dirname,
-						`../../public/${name ? `${name}s` : ''}`
+						`../assets/${name ? `${name}s` : ''}`
 					);
 
 					expect(mkdirSync).toHaveBeenCalledWith(expectedPath, {
@@ -100,7 +99,7 @@ describe('General Utils Functions', () => {
 				(_description, fieldname) => {
 					diskStorageDestination(req, { ...mockFile, fieldname }, mockCallback);
 
-					const expectedPath = path.join(__dirname, '../../public');
+					const expectedPath = path.join(__dirname, '../assets');
 
 					expect(mkdirSync).toHaveBeenCalledWith(expectedPath, {
 						recursive: true,
@@ -129,7 +128,7 @@ describe('General Utils Functions', () => {
 						const extension = mime.split('/')[1] ?? '';
 						expect(mockCallbackFilename).toHaveBeenLastCalledWith(
 							null,
-							`${name}-${mockFile.filename}.${extension}`
+							`${name}-${mockFile.originalname}.${extension}`
 						);
 					});
 				});

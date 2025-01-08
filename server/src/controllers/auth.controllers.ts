@@ -56,23 +56,21 @@ export const loginUser = async (req: CustomLoginRequest, res: Response) => {
 	});
 
 	setRefreshTokenCookie(res, newRefreshToken);
-	res.json({ accessToken });
+	return void res.json({ accessToken });
 };
 
 // Logout
 export const logoutUser = async (req: CustomCookieRequest, res: Response) => {
 	const { tk: refreshToken } = req.cookies;
 	if (!refreshToken) {
-		res.sendStatus(204);
-		return;
+		return void res.sendStatus(204);
 	}
 
 	const foundUser = await userTokenExists({ refreshToken });
 
 	if (!foundUser) {
 		clearRefreshTokenCookie(res);
-		res.sendStatus(204);
-		return;
+		return void res.sendStatus(204);
 	}
 
 	await updateUserById({
@@ -81,8 +79,7 @@ export const logoutUser = async (req: CustomCookieRequest, res: Response) => {
 	});
 
 	clearRefreshTokenCookie(res);
-	res.sendStatus(204);
-	return;
+	return void res.sendStatus(204);
 };
 
 // Refresh Token
@@ -90,8 +87,7 @@ export const refreshToken = async (req: CustomCookieRequest, res: Response) => {
 	const { tk: refreshToken } = req.cookies;
 
 	if (!refreshToken) {
-		res.sendStatus(401);
-		return;
+		throw Error('', { cause: 401 });
 	}
 
 	clearRefreshTokenCookie(res);
@@ -100,8 +96,7 @@ export const refreshToken = async (req: CustomCookieRequest, res: Response) => {
 
 	if (!foundUser) {
 		handleRefreshTokenReuse(refreshToken, res);
-		res.sendStatus(403);
-		return;
+		throw Error('', { cause: 403 });
 	}
 
 	const newRefreshTokenArray =

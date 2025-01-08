@@ -1,30 +1,26 @@
 import { CustomPayload } from '@/controllers/auth.controllers.js';
 import { TOKEN_CONFIG } from '@/utils/auth.utils.js';
 import { NextFunction, Request, Response } from 'express';
-import { verify } from 'jsonwebtoken';
+import jwt from 'jsonwebtoken';
 
-export default function (req: Request, res: Response, next: NextFunction) {
+export default function (req: Request, _res: Response, next: NextFunction) {
 	const authHeader = req.headers.authorization;
 	if (!authHeader?.startsWith('Bearer ')) {
-		res.sendStatus(401);
-		return;
+		throw Error('', { cause: 401 });
 	}
 
 	const token = authHeader.split(' ')[1];
 
 	if (!token) {
-		res.sendStatus(401);
-		return;
+		throw Error('', { cause: 401 });
 	}
 
-	verify(token, TOKEN_CONFIG.ACCESS_TOKEN_SECRET, (err, decoded) => {
+	jwt.verify(token, TOKEN_CONFIG.ACCESS_TOKEN_SECRET, (err, decoded) => {
 		if (err) {
-			res.sendStatus(403);
-			return;
+			throw Error('', { cause: 403 });
 		}
 
-		const payload = decoded as CustomPayload;
-		req.userId = payload.acc;
+		req.userId = (decoded as CustomPayload).acc;
 		next();
 	});
 }

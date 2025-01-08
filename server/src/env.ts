@@ -21,6 +21,7 @@ const envSchema = z.object({
 	REFRESH_TOKEN_SECRET: z.string(),
 	DB_MIGRATING: stringBoolean,
 	DB_SEEDING: stringBoolean,
+	NODE_ENV: z.coerce.string(),
 });
 
 export type envSchema = z.infer<typeof envSchema>;
