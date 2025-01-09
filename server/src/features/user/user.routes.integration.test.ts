@@ -91,7 +91,7 @@ describe('User Routes Integration Tests', () => {
 	});
 
 	afterAll(async () => {
-		const assetPath = join(__dirname, '../assets');
+		const assetPath = join(__dirname, '../../assets');
 		await rm(assetPath, { recursive: true, force: true });
 		await mkdir(assetPath);
 		await reset(db, { user, work, highschool, college, friendship });
