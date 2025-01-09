@@ -1,3 +1,7 @@
+import { validateSUUID } from '@/utils/general.utils.js';
+import argon from 'argon2';
+import { Request, Response } from 'express';
+import { SUUID } from 'short-uuid';
 import {
 	createUser,
 	deleteUserById,
@@ -5,12 +9,8 @@ import {
 	findUsersByName,
 	updateUserById,
 	userExists,
-} from '@/services/user.services.js';
-import { validateSUUID } from '@/utils/general.utils.js';
-import { RegisterUserType, UpdateUserType } from '@/zod-schemas/user.js';
-import argon from 'argon2';
-import { Request, Response } from 'express';
-import { SUUID } from 'short-uuid';
+} from './user.services.js';
+import { RegisterUserType, UpdateUserType } from './user.zod.schemas.js';
 
 export type CustomUserFiles = Partial<
 	Record<'profileImage' | 'coverImage', Express.Multer.File[]>

@@ -1,11 +1,11 @@
+import authRoutes from '@/features/auth/auth.routes.js';
+import userRoutes from '@/features/user/user.routes.js';
 import cookieParser from 'cookie-parser';
 import express from 'express';
 import helmet from 'helmet';
 import morgan from 'morgan';
 import { connectDB } from './db/index.js';
 import errorHandler from './middlewares/errorHandler.middlewares.js';
-import authRoutes from './routes/auth.routes.js';
-import userRoutes from './routes/user.routes.js';
 
 const app = express();
 

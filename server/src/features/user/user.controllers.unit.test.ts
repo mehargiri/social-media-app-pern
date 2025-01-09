@@ -1,12 +1,4 @@
 import {
-	createUser,
-	deleteUserById,
-	findUserById,
-	findUsersByName,
-	updateUserById,
-	userExists,
-} from '@/services/user.services.js';
-import {
 	createTestCollege,
 	createTestFile,
 	createTestHighSchool,
@@ -15,7 +7,6 @@ import {
 	samplePassword,
 	sampleSUUID,
 } from '@/utils/test.utils.js';
-import { RegisterUserType, UpdateUserType } from '@/zod-schemas/user.js';
 import { Request, Response } from 'express';
 import { SUUID } from 'short-uuid';
 import { afterAll, beforeEach, describe, expect, it, Mock, vi } from 'vitest';
@@ -28,6 +19,15 @@ import {
 	registerUser,
 	updateUser,
 } from './user.controllers.js';
+import {
+	createUser,
+	deleteUserById,
+	findUserById,
+	findUsersByName,
+	updateUserById,
+	userExists,
+} from './user.services.js';
+import { RegisterUserType, UpdateUserType } from './user.zod.schemas.js';
 
 const testUser = createTestUser();
 testUser.password = samplePassword;
@@ -85,7 +85,7 @@ describe('User Controller Functions', () => {
 		validateSUUID: vi.fn().mockImplementation(() => true),
 	}));
 
-	vi.mock('@/services/user.services.js', () => ({
+	vi.mock('./user.services.js', () => ({
 		findUserById: vi.fn(),
 		findUsersByName: vi.fn(),
 		createUser: vi.fn(),

@@ -1,16 +1,16 @@
 /* eslint-disable @typescript-eslint/no-misused-promises */
 import {
-	getUserDataForLogin,
-	updateUserById,
-	userExists,
-	userTokenExists,
-} from '@/services/user.services.js';
-import {
 	clearRefreshTokenCookie,
 	generateTokens,
 	setRefreshTokenCookie,
 	TOKEN_CONFIG,
-} from '@/utils/auth.utils.js';
+} from '@/features/auth/auth.utils.js';
+import {
+	getUserDataForLogin,
+	updateUserById,
+	userExists,
+	userTokenExists,
+} from '@/features/user/user.services.js';
 import { verify } from 'argon2';
 import { Response } from 'express';
 import jwt from 'jsonwebtoken';

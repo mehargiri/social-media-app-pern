@@ -3,14 +3,7 @@ import {
 	updateUserById,
 	userExists,
 	userTokenExists,
-} from '@/services/user.services.js';
-import {
-	clearRefreshTokenCookie,
-	createAccessToken,
-	createRefreshToken,
-	generateTokens,
-	setRefreshTokenCookie,
-} from '@/utils/auth.utils.js';
+} from '@/features/user/user.services.js';
 import { sampleEmail, samplePassword } from '@/utils/test.utils.js';
 import { verify } from 'argon2';
 import { Response } from 'express';
@@ -31,6 +24,13 @@ import {
 	processOldRefreshTokenForNew,
 	validateCredentials,
 } from './auth.controllers.helpers.js';
+import {
+	clearRefreshTokenCookie,
+	createAccessToken,
+	createRefreshToken,
+	generateTokens,
+	setRefreshTokenCookie,
+} from './auth.utils.js';
 
 const flushPromises = async () => {
 	await new Promise((resolve) => {
@@ -39,7 +39,7 @@ const flushPromises = async () => {
 };
 
 describe('Auth Controller Helper Functions', () => {
-	vi.mock('@/services/user.services.js', () => ({
+	vi.mock('@/features/user/user.services.js', () => ({
 		getUserDataForLogin: vi.fn(),
 		userTokenExists: vi.fn(),
 		userExists: vi.fn(),
@@ -51,7 +51,7 @@ describe('Auth Controller Helper Functions', () => {
 		hash: vi.fn(),
 	}));
 
-	vi.mock(import('@/utils/auth.utils.js'), async (importOriginal) => {
+	vi.mock(import('./auth.utils.js'), async (importOriginal) => {
 		const actualModule = await importOriginal();
 		return {
 			...actualModule,

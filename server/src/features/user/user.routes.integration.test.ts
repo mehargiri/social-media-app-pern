@@ -7,8 +7,7 @@ import {
 	user,
 	work,
 } from '@/db/schema/index.js';
-import { findUserById, findUsersByName } from '@/services/user.services.js';
-import { createAccessToken } from '@/utils/auth.utils.js';
+import { createAccessToken } from '@/features/auth/auth.utils.js';
 import { convertToUUID } from '@/utils/general.utils.js';
 import {
 	createTestCollege,
@@ -26,6 +25,7 @@ import { join } from 'path';
 import { generate, SUUID } from 'short-uuid';
 import supertest, { Response } from 'supertest';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
+import { findUserById, findUsersByName } from './user.services.js';
 
 // eslint-disable-next-line @typescript-eslint/no-misused-promises
 const api = supertest(app);
@@ -381,7 +381,10 @@ describe('User Routes Integration Tests', () => {
 
 	describe('Update user with id route', () => {
 		const tempUser = { ...testUsers[0] };
-		const filePath = join(__dirname, '../../public/blank-profile-picture.png');
+		const filePath = join(
+			__dirname,
+			'../../../public/blank-profile-picture.png'
+		);
 
 		it('should throw HTTP 401 if the route is accessed without login', async () => {
 			await api.patch(`/api/user/${userId}`).field(tempUser).expect(401);

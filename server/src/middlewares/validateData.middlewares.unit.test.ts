@@ -1,5 +1,5 @@
+import { loginUserSchema } from '@/features/auth/auth.zod.schemas.js';
 import { sampleEmail, samplePassword } from '@/utils/test.utils.js';
-import { loginUserSchema } from '@/zod-schemas/user.js';
 import { NextFunction, Request, Response } from 'express';
 import { afterAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import validateData from './validateData.middlewares.js';

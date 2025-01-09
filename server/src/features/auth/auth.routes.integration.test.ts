@@ -2,8 +2,7 @@
 import app from '@/app.js';
 import { db } from '@/db/index.js';
 import { user } from '@/db/schema/index.js';
-import { updateUserById } from '@/services/user.services.js';
-import { createRefreshToken } from '@/utils/auth.utils.js';
+import { updateUserById } from '@/features/user/user.services.js';
 import { getTestUserId, samplePassword, testUser } from '@/utils/test.utils.js';
 import { eq } from 'drizzle-orm';
 import { reset } from 'drizzle-seed';
@@ -18,6 +17,7 @@ import {
 	it,
 	vi,
 } from 'vitest';
+import { createRefreshToken } from './auth.utils.js';
 
 const api = supertest(app);
 

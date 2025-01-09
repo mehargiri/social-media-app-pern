@@ -1,5 +1,5 @@
-import { CustomPayload } from '@/controllers/auth.controllers.js';
-import { TOKEN_CONFIG } from '@/utils/auth.utils.js';
+import { CustomPayload } from '@/features/auth/auth.controllers.js';
+import { TOKEN_CONFIG } from '@/features/auth/auth.utils.js';
 import { NextFunction, Request, Response } from 'express';
 import jwt from 'jsonwebtoken';
 

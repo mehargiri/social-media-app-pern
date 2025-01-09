@@ -1,13 +1,10 @@
 import { db } from '@/db/index.js';
 import { user } from '@/db/schema/index.js';
+import { LoginUserType } from '@/features/auth/auth.zod.schemas.js';
 import { convertToSUUID, convertToUUID } from '@/utils/general.utils.js';
-import {
-	LoginUserType,
-	RegisterUserType,
-	UpdateUserType,
-} from '@/zod-schemas/user.js';
 import { eq, ilike, sql } from 'drizzle-orm';
 import { SUUID } from 'short-uuid';
+import { RegisterUserType, UpdateUserType } from './user.zod.schemas.js';
 
 // Read User
 export const findUserById = async (data: { id: SUUID }) => {

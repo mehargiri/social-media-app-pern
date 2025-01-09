@@ -1,11 +1,8 @@
-import { updateUserById, userTokenExists } from '@/services/user.services.js';
+import { LoginUserType } from '@/features/auth/auth.zod.schemas.js';
 import {
-	clearRefreshTokenCookie,
-	CONSTANT_NAMES,
-	generateTokens,
-	setRefreshTokenCookie,
-} from '@/utils/auth.utils.js';
-import { LoginUserType } from '@/zod-schemas/user.js';
+	updateUserById,
+	userTokenExists,
+} from '@/features/user/user.services.js';
 import { Request, Response } from 'express';
 import { JwtPayload } from 'jsonwebtoken';
 import { SUUID } from 'short-uuid';
@@ -15,6 +12,12 @@ import {
 	processOldRefreshTokenForNew,
 	validateCredentials,
 } from './auth.controllers.helpers.js';
+import {
+	clearRefreshTokenCookie,
+	CONSTANT_NAMES,
+	generateTokens,
+	setRefreshTokenCookie,
+} from './auth.utils.js';
 
 export interface CookieType {
 	[CONSTANT_NAMES.cookieName]?: string;

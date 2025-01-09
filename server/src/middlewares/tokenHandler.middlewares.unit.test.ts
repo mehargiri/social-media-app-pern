@@ -1,4 +1,4 @@
-import { createAccessToken } from '@/utils/auth.utils.js';
+import { createAccessToken } from '@/features/auth/auth.utils.js';
 import { sampleSUUID } from '@/utils/test.utils.js';
 import { NextFunction, Request, Response } from 'express';
 import { SUUID } from 'short-uuid';

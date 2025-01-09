@@ -1,11 +1,3 @@
-import {
-	deleteUser,
-	getMe,
-	getUser,
-	getUsersByName,
-	registerUser,
-	updateUser,
-} from '@/controllers/user.controllers.js';
 import tokenHandler from '@/middlewares/tokenHandler.middlewares.js';
 import validateData from '@/middlewares/validateData.middlewares.js';
 import {
@@ -14,9 +6,17 @@ import {
 	imageFieldNames,
 	maxFileSize,
 } from '@/utils/general.utils.js';
-import { registerUserSchema, updateUserSchema } from '@/zod-schemas/user.js';
 import { Router } from 'express';
 import multer from 'multer';
+import {
+	deleteUser,
+	getMe,
+	getUser,
+	getUsersByName,
+	registerUser,
+	updateUser,
+} from './user.controllers.js';
+import { registerUserSchema, updateUserSchema } from './user.zod.schemas.js';
 
 const router = Router();
 

@@ -1,9 +1,7 @@
-import { updateUserById, userTokenExists } from '@/services/user.services.js';
 import {
-	clearRefreshTokenCookie,
-	generateTokens,
-	setRefreshTokenCookie,
-} from '@/utils/auth.utils.js';
+	updateUserById,
+	userTokenExists,
+} from '@/features/user/user.services.js';
 import { sampleEmail, samplePassword } from '@/utils/test.utils.js';
 import { Response } from 'express';
 import { SUUID } from 'short-uuid';
@@ -22,9 +20,14 @@ import {
 	logoutUser,
 	refreshToken,
 } from './auth.controllers.js';
+import {
+	clearRefreshTokenCookie,
+	generateTokens,
+	setRefreshTokenCookie,
+} from './auth.utils.js';
 
 describe('Authentication Controller Functions', () => {
-	vi.mock(import('@/utils/auth.utils.js'), async (importOriginal) => {
+	vi.mock(import('./auth.utils.js'), async (importOriginal) => {
 		const actualModule = await importOriginal();
 		return {
 			...actualModule,
@@ -34,7 +37,7 @@ describe('Authentication Controller Functions', () => {
 		};
 	});
 
-	vi.mock('@/services/user.services.js', () => ({
+	vi.mock('@/features/user/user.services.js', () => ({
 		userTokenExists: vi.fn(),
 		updateUserById: vi.fn(),
 	}));

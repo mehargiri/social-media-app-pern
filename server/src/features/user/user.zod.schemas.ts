@@ -1,9 +1,5 @@
-import { user } from '@/db/schema/user.js';
-import {
-	createInsertSchema,
-	createSelectSchema,
-	createUpdateSchema,
-} from 'drizzle-zod';
+import { user } from '@/db/schema/index.js';
+import { createInsertSchema, createUpdateSchema } from 'drizzle-zod';
 import { SUUID } from 'short-uuid';
 
 const passwordRegex =
@@ -55,15 +51,6 @@ export const insertUserSchema = createInsertSchema(user, {
 });
 
 // Schemas for different CRUD actions
-export const loginUserSchema = createSelectSchema(user, {
-	email: (schema) =>
-		schema.min(1, 'Email is required').email('Email must be valid'),
-	password: (schema) => schema.min(1, 'Password is required'),
-}).pick({
-	email: true,
-	password: true,
-});
-
 export const registerUserSchema = insertUserSchema;
 
 export const updateUserSchema = createUpdateSchema(user).omit({
@@ -73,7 +60,5 @@ export const updateUserSchema = createUpdateSchema(user).omit({
 
 // Types for different CRUD actions
 export type RegisterUserType = typeof registerUserSchema._type;
-
-export type LoginUserType = typeof loginUserSchema._type;
 
 export type UpdateUserType = typeof updateUserSchema._type & { id: SUUID };
