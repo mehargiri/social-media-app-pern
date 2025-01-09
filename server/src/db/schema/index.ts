@@ -1,4 +1,3 @@
-export { asset } from './asset.js';
 export { college, collegeRelations, collegeTypeEnum } from './college.js';
 export { comment, commentRelations } from './comment.js';
 export {

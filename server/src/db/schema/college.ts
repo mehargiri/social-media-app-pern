@@ -1,5 +1,6 @@
 import { relations } from 'drizzle-orm';
 import { integer, pgEnum, pgTable, text, uuid } from 'drizzle-orm/pg-core';
+import { timestamps } from './columns.helpers.js';
 import { user } from './index.js';
 
 export const collegeTypeEnum = pgEnum('college_type', [
@@ -22,6 +23,7 @@ export const college = pgTable('college', {
 	major3: text('major_3'),
 	degree: text(),
 	type: collegeTypeEnum(),
+	...timestamps,
 });
 
 export const collegeRelations = relations(college, ({ one }) => ({

@@ -1,5 +1,6 @@
 import { relations } from 'drizzle-orm';
 import { boolean, integer, pgTable, text, uuid } from 'drizzle-orm/pg-core';
+import { timestamps } from './columns.helpers.js';
 import { user } from './index.js';
 
 export const highschool = pgTable('highschool', {
@@ -12,6 +13,7 @@ export const highschool = pgTable('highschool', {
 	endYear: integer(),
 	graduated: boolean().default(false),
 	description: text(),
+	...timestamps,
 });
 
 export const highschoolRelations = relations(highschool, ({ one }) => ({

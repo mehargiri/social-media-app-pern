@@ -3,13 +3,6 @@ CREATE TYPE "public"."friend_status" AS ENUM('unfriend', 'pending', 'friend');--
 CREATE TYPE "public"."like_type" AS ENUM('like', 'love', 'happy');--> statement-breakpoint
 CREATE TYPE "public"."notification_type" AS ENUM('friendRequest', 'like', 'comment', 'reply', 'post');--> statement-breakpoint
 CREATE TYPE "public"."gender" AS ENUM('male', 'female', 'other');--> statement-breakpoint
-CREATE TABLE "asset" (
-	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
-	"type" "asset_type" NOT NULL,
-	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
-	"updated_at" timestamp with time zone DEFAULT now() NOT NULL
-);
---> statement-breakpoint
 CREATE TABLE "college" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"user_id" uuid NOT NULL,
@@ -21,7 +14,9 @@ CREATE TABLE "college" (
 	"major_2" text,
 	"major_3" text,
 	"degree" text,
-	"type" "college_type"
+	"type" "college_type",
+	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
+	"updated_at" timestamp with time zone DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
 CREATE TABLE "comment" (
@@ -49,7 +44,9 @@ CREATE TABLE "highschool" (
 	"start_year" integer,
 	"end_year" integer,
 	"graduated" boolean DEFAULT false,
-	"description" text
+	"description" text,
+	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
+	"updated_at" timestamp with time zone DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
 CREATE TABLE "like" (
@@ -59,6 +56,8 @@ CREATE TABLE "like" (
 	"comment_id" uuid,
 	"reply_id" uuid,
 	"type" "like_type" DEFAULT 'like',
+	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
+	"updated_at" timestamp with time zone DEFAULT now() NOT NULL,
 	CONSTRAINT "like_at_least_one_entity" CHECK ("like"."post_id" IS NOT NULL OR "like"."comment_id" IS NOT NULL OR "like"."reply_id" IS NOT NULL)
 );
 --> statement-breakpoint
@@ -89,7 +88,7 @@ CREATE TABLE "post" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"user_id" uuid NOT NULL,
 	"content" text,
-	"asset_id" uuid NOT NULL,
+	"asset" text[],
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
 	"updated_at" timestamp with time zone DEFAULT now() NOT NULL
 );
@@ -138,7 +137,9 @@ CREATE TABLE "work" (
 	"description" text,
 	"start_year" integer,
 	"end_year" integer,
-	"working_now" boolean DEFAULT false
+	"working_now" boolean DEFAULT false,
+	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
+	"updated_at" timestamp with time zone DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
 ALTER TABLE "college" ADD CONSTRAINT "college_user_id_user__id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."user_"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
@@ -159,7 +160,6 @@ ALTER TABLE "notification" ADD CONSTRAINT "notification_reply_id_reply_id_fk" FO
 ALTER TABLE "notification_receiver" ADD CONSTRAINT "notification_receiver_user_id_user__id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."user_"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "notification_receiver" ADD CONSTRAINT "notification_receiver_notification_id_notification_id_fk" FOREIGN KEY ("notification_id") REFERENCES "public"."notification"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "post" ADD CONSTRAINT "post_user_id_user__id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."user_"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "post" ADD CONSTRAINT "post_asset_id_asset_id_fk" FOREIGN KEY ("asset_id") REFERENCES "public"."asset"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "reply" ADD CONSTRAINT "reply_user_id_user__id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."user_"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "reply" ADD CONSTRAINT "reply_parent_reply_id_reply_id_fk" FOREIGN KEY ("parent_reply_id") REFERENCES "public"."reply"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "reply" ADD CONSTRAINT "reply_parent_reply_user_id_user__id_fk" FOREIGN KEY ("parent_reply_user_id") REFERENCES "public"."user_"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint

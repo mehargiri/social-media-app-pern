@@ -1,5 +1,6 @@
 import { relations, sql } from 'drizzle-orm';
 import { check, pgEnum, pgTable, uuid } from 'drizzle-orm/pg-core';
+import { timestamps } from './columns.helpers.js';
 import { comment, post, reply, user } from './index.js';
 
 export const likeTypesEnum = pgEnum('like_type', ['like', 'love', 'happy']);
@@ -15,6 +16,7 @@ export const like = pgTable(
 		commentId: uuid().references(() => comment.id, { onDelete: 'cascade' }),
 		replyId: uuid().references(() => reply.id, { onDelete: 'cascade' }),
 		type: likeTypesEnum().default('like'),
+		...timestamps,
 	},
 	(table) => [
 		check(
