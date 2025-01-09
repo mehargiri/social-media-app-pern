@@ -3,7 +3,7 @@ import { db } from '@/db/index.js';
 import {
 	college,
 	friendship,
-	highSchool,
+	highschool,
 	user,
 	work,
 } from '@/db/schema/index.js';
@@ -82,7 +82,7 @@ describe('User Routes Integration Tests', () => {
 
 		await db.insert(friendship).values(testFriendShips);
 		await db.insert(work).values(testCollege);
-		await db.insert(highSchool).values(testHighSchool);
+		await db.insert(highschool).values(testHighSchool);
 		await db.insert(college).values(testCollege);
 
 		loginResponse = await api.post(loginUrl).send(loginDetails);
@@ -94,13 +94,13 @@ describe('User Routes Integration Tests', () => {
 		const assetPath = join(__dirname, '../assets');
 		await rm(assetPath, { recursive: true, force: true });
 		await mkdir(assetPath);
-		await reset(db, { user, work, highSchool, college, friendship });
+		await reset(db, { user, work, highschool, college, friendship });
 	});
 
 	describe('GET me route', () => {
 		const testUrl = '/api/user/me';
 
-		const callTestFn = async (status: number, token?: string) => {
+		const callTestRoute = async (status: number, token?: string) => {
 			const data = token
 				? await api.get(testUrl).auth(token, { type: 'bearer' }).expect(status)
 				: await api.get(testUrl).expect(status);
@@ -108,11 +108,11 @@ describe('User Routes Integration Tests', () => {
 		};
 
 		it('should throw HTTP 401 if the route is accessed without auth token', async () => {
-			await callTestFn(401);
+			await callTestRoute(401);
 		});
 
 		it('should return HTTP 400 and a message when the provided id is invalid (not SUUID)', async () => {
-			const response: ResponseWithError = await callTestFn(
+			const response: ResponseWithError = await callTestRoute(
 				400,
 				createAccessToken('random-id' as SUUID)
 			);
@@ -121,7 +121,7 @@ describe('User Routes Integration Tests', () => {
 		});
 
 		it('should return HTTP 404 and a message when the provided id is valid (SUUID) but there is no user with the provided id in the database', async () => {
-			const response: ResponseWithError = await callTestFn(
+			const response: ResponseWithError = await callTestRoute(
 				404,
 				createAccessToken(generate())
 			);
@@ -131,7 +131,7 @@ describe('User Routes Integration Tests', () => {
 
 		it('should return profile data including work, highSchool, college, and friends for logged user', async () => {
 			const response: SuperTestResponse<getUserResponseSuccess> =
-				await callTestFn(200, loginResponse.body.accessToken);
+				await callTestRoute(200, loginResponse.body.accessToken);
 
 			expect(response.body.id).toBeDefined();
 			expect(response.body.fullName).toBeDefined();
@@ -153,7 +153,7 @@ describe('User Routes Integration Tests', () => {
 	});
 
 	describe('GET user with id route', () => {
-		const callTestFn = async (
+		const callTestRoute = async (
 			status: number,
 			token?: string,
 			id: string = userId
@@ -168,11 +168,11 @@ describe('User Routes Integration Tests', () => {
 		};
 
 		it('should throw HTTP 401 if the route is accessed without auth token', async () => {
-			await callTestFn(401);
+			await callTestRoute(401);
 		});
 
 		it('should return HTTP 400 and a message when the provided id is invalid (not SUUID)', async () => {
-			const response: ResponseWithError = await callTestFn(
+			const response: ResponseWithError = await callTestRoute(
 				400,
 				authToken,
 				'random-id'
@@ -182,7 +182,7 @@ describe('User Routes Integration Tests', () => {
 		});
 
 		it('should return HTTP 404 and a message when the provided id is valid (SUUID) but there is no user with the provided id in the database', async () => {
-			const response: ResponseWithError = await callTestFn(
+			const response: ResponseWithError = await callTestRoute(
 				404,
 				authToken,
 				generate()
@@ -193,7 +193,7 @@ describe('User Routes Integration Tests', () => {
 
 		it('should return profile data including work, highSchool, college, and friends for the provided id of the user', async () => {
 			const response: SuperTestResponse<getUserResponseSuccess> =
-				await callTestFn(200, loginResponse.body.accessToken);
+				await callTestRoute(200, loginResponse.body.accessToken);
 
 			expect(response.body.id).toBeDefined();
 			expect(response.body.fullName).toBeDefined();
@@ -218,7 +218,7 @@ describe('User Routes Integration Tests', () => {
 		const testName = testUser.firstName;
 		const testUrlBase = '/api/user/';
 
-		const callTestFn = async (
+		const callTestRoute = async (
 			status: number,
 			token?: string,
 			queryValue?: string
@@ -234,16 +234,16 @@ describe('User Routes Integration Tests', () => {
 		};
 
 		it('should throw HTTP 401 if the route is accessed without login', async () => {
-			await callTestFn(401, undefined, testName);
+			await callTestRoute(401, undefined, testName);
 		});
 
 		it('should return HTTP 400 and a message when name is not provided', async () => {
-			const response: ResponseWithError = await callTestFn(400, authToken);
+			const response: ResponseWithError = await callTestRoute(400, authToken);
 			expect(response.body.error).toEqual('Name is required');
 		});
 
 		it('should return HTTP 404 and a message when there is no user with the provided name in the database', async () => {
-			const response: ResponseWithError = await callTestFn(
+			const response: ResponseWithError = await callTestRoute(
 				404,
 				authToken,
 				'Testing Please'
@@ -254,7 +254,7 @@ describe('User Routes Integration Tests', () => {
 
 		it('should return id, fullName, and profilePic for the provided name of the user', async () => {
 			const response: SuperTestResponse<getUsersByNameResponseSuccess> =
-				await callTestFn(200, loginResponse.body.accessToken, testName);
+				await callTestRoute(200, loginResponse.body.accessToken, testName);
 
 			expect(response.body.length).toEqual(ARRAY_LENGTH);
 			expect(response.body.at(0)?.fullName).toMatch(testName);
@@ -267,7 +267,7 @@ describe('User Routes Integration Tests', () => {
 		const testUrl = '/api/user/register';
 		let tempUser: typeof testUser & { phone: string; birthday: string };
 
-		const callTestFn = async (status: number, message?: string) => {
+		const callTestRoute = async (status: number, message?: string) => {
 			const response: ResponseWithError = await api
 				.post(testUrl)
 				.send(tempUser)
@@ -285,13 +285,13 @@ describe('User Routes Integration Tests', () => {
 		it('should return HTTP 400 and a message when first name is empty in request body', async () => {
 			tempUser.firstName = '';
 
-			await callTestFn(400, 'firstName: First Name is required');
+			await callTestRoute(400, 'firstName: First Name is required');
 		});
 
 		it('should return HTTP 400 and a message when first name is more than 260 characters', async () => {
 			tempUser.firstName = 'A'.repeat(261);
 
-			await callTestFn(
+			await callTestRoute(
 				400,
 				'firstName: First Name cannot be more than 260 characters'
 			);
@@ -300,13 +300,13 @@ describe('User Routes Integration Tests', () => {
 		it('should return HTTP 400 and a message when last name is empty in request body', async () => {
 			tempUser.lastName = '';
 
-			await callTestFn(400, 'lastName: Last Name is required');
+			await callTestRoute(400, 'lastName: Last Name is required');
 		});
 
 		it('should return HTTP 400 and a message when last name is more than 260 characters', async () => {
 			tempUser.lastName = 'A'.repeat(261);
 
-			await callTestFn(
+			await callTestRoute(
 				400,
 				'lastName: Last Name cannot be more than 260 characters'
 			);
@@ -315,18 +315,18 @@ describe('User Routes Integration Tests', () => {
 		it('should return HTTP 400 and a message when email is empty in request body', async () => {
 			tempUser.email = '';
 
-			await callTestFn(400, 'email: Email is required');
+			await callTestRoute(400, 'email: Email is required');
 		});
 
 		it('should return HTTP 400 and a message when email is not valid', async () => {
 			tempUser.email = 'sampleemail';
 
-			await callTestFn(400, 'email: Email must be valid');
+			await callTestRoute(400, 'email: Email must be valid');
 		});
 
 		it('should return HTTP 400 and a message when password is less than 8 characters', async () => {
 			tempUser.password = 'pass';
-			await callTestFn(
+			await callTestRoute(
 				400,
 				'password: Password is required and must be minimum of 8 characters'
 			);
@@ -335,7 +335,7 @@ describe('User Routes Integration Tests', () => {
 		it('should return HTTP 400 and a message when password is more than 8 characters but too simple', async () => {
 			tempUser.password = 'Password1';
 
-			await callTestFn(
+			await callTestRoute(
 				400,
 				'password: Stronger password is required. The password must have one uppercase, one lowercase, one number and one special character and no spaces'
 			);
@@ -344,7 +344,7 @@ describe('User Routes Integration Tests', () => {
 		it('should return HTTP 400 and a message when phone number is provided in incorrect format', async () => {
 			tempUser.phone = '1234567891';
 
-			await callTestFn(
+			await callTestRoute(
 				400,
 				'phone: Phone number must be in format XXX-XXX-XXXX'
 			);
@@ -353,7 +353,7 @@ describe('User Routes Integration Tests', () => {
 		it('should return HTTP 400 and a message when birthday is provided in incorrect format', async () => {
 			tempUser.birthday = '20240101';
 
-			await callTestFn(
+			await callTestRoute(
 				400,
 				'birthday: Birthday must be valid date in YYYY-MM-DD format'
 			);
@@ -362,7 +362,7 @@ describe('User Routes Integration Tests', () => {
 		it('should return HTTP 400 and a message when provided birthday is an invalid date', async () => {
 			tempUser.birthday = '2024-02-32';
 
-			await callTestFn(
+			await callTestRoute(
 				400,
 				'birthday: Birthday must be valid date in YYYY-MM-DD format'
 			);
@@ -371,11 +371,11 @@ describe('User Routes Integration Tests', () => {
 		it('should return HTTP 500 and a message when user creation failed due to same duplicate entry for the email field', async () => {
 			tempUser.email = testUsers[0]?.email ?? '';
 
-			await callTestFn(500, 'Something went wrong. Try again later!');
+			await callTestRoute(500, 'Something went wrong. Try again later!');
 		});
 
 		it('should return HTTP 201 on success', async () => {
-			await callTestFn(201);
+			await callTestRoute(201);
 		});
 	});
 

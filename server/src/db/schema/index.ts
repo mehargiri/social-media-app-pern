@@ -1,3 +1,4 @@
+export { asset } from './asset.js';
 export { college, collegeRelations, collegeTypeEnum } from './college.js';
 export { comment, commentRelations } from './comment.js';
 export {
@@ -5,7 +6,7 @@ export {
 	friendshipRelations,
 	friendStatusEnum,
 } from './friendship.js';
-export { highSchool, highSchoolRelations } from './highSchool.js';
+export { highschool, highschoolRelations } from './highschool.js';
 export { like, likeRelations, likeTypesEnum } from './like.js';
 export {
 	notification,
@@ -13,9 +14,9 @@ export {
 	notificationTypeEnum,
 } from './notification.js';
 export {
-	notificationUser,
-	notificationUserRelations,
-} from './notificationUser.js';
+	notificationReceiver,
+	notificationReceiverRelations,
+} from './notificationReceiver.js';
 export { post, postRelations } from './post.js';
 export { reply, replyRelations } from './reply.js';
 export { user, userGenderEnum, userRelations } from './user.js';

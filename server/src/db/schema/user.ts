@@ -12,8 +12,8 @@ import { timestamps } from './columns.helpers.js';
 import {
 	college,
 	friendship,
-	highSchool,
-	notificationUser,
+	highschool,
+	notificationReceiver,
 	post,
 	work,
 } from './index.js';
@@ -52,6 +52,6 @@ export const userRelations = relations(user, ({ many, one }) => ({
 	posts: many(post),
 	work: one(work),
 	college: one(college),
-	highSchool: one(highSchool),
-	notifications: many(notificationUser),
+	highSchool: one(highschool),
+	notifications: many(notificationReceiver),
 }));

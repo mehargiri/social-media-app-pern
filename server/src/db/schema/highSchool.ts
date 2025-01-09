@@ -2,7 +2,7 @@ import { relations } from 'drizzle-orm';
 import { boolean, integer, pgTable, text, uuid } from 'drizzle-orm/pg-core';
 import { user } from './index.js';
 
-export const highSchool = pgTable('high_school', {
+export const highschool = pgTable('highschool', {
 	id: uuid().primaryKey().defaultRandom(),
 	userId: uuid()
 		.notNull()
@@ -14,9 +14,9 @@ export const highSchool = pgTable('high_school', {
 	description: text(),
 });
 
-export const highSchoolRelations = relations(highSchool, ({ one }) => ({
+export const highschoolRelations = relations(highschool, ({ one }) => ({
 	user: one(user, {
-		fields: [highSchool.userId],
+		fields: [highschool.userId],
 		references: [user.id],
 	}),
 }));

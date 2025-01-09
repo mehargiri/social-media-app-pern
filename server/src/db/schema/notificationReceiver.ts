@@ -3,8 +3,8 @@ import { boolean, pgTable, primaryKey, uuid } from 'drizzle-orm/pg-core';
 import { timestamps } from './columns.helpers.js';
 import { notification, user } from './index.js';
 
-export const notificationUser = pgTable(
-	'notification_user',
+export const notificationReceiver = pgTable(
+	'notification_receiver',
 	{
 		userId: uuid()
 			.notNull()
@@ -12,21 +12,21 @@ export const notificationUser = pgTable(
 		notificationId: uuid()
 			.notNull()
 			.references(() => notification.id, { onDelete: 'cascade' }),
-		read: boolean().default(false),
+		isRead: boolean().default(false),
 		...timestamps,
 	},
 	(table) => [primaryKey({ columns: [table.userId, table.notificationId] })]
 );
 
-export const notificationUserRelations = relations(
-	notificationUser,
+export const notificationReceiverRelations = relations(
+	notificationReceiver,
 	({ one }) => ({
 		user: one(user, {
-			fields: [notificationUser.userId],
+			fields: [notificationReceiver.userId],
 			references: [user.id],
 		}),
 		notification: one(notification, {
-			fields: [notificationUser.notificationId],
+			fields: [notificationReceiver.notificationId],
 			references: [notification.id],
 		}),
 	})

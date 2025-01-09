@@ -17,16 +17,16 @@ export const reply = pgTable(
 		userId: uuid()
 			.notNull()
 			.references(() => user.id, { onDelete: 'cascade' }),
-		repliedUserId: uuid()
-			.notNull()
-			.references(() => user.id, { onDelete: 'cascade' }),
+		parentReplyId: uuid().references((): AnyPgColumn => reply.id, {
+			onDelete: 'cascade',
+		}),
+		parentReplyUserId: uuid().references(() => user.id, {
+			onDelete: 'cascade',
+		}),
 		commentId: uuid()
 			.notNull()
 			.references(() => comment.id, { onDelete: 'cascade' }),
-		replyId: uuid().references((): AnyPgColumn => reply.id, {
-			onDelete: 'cascade',
-		}),
-		content: text(),
+		content: text().notNull(),
 		replyLevel: integer().default(1),
 		...timestamps,
 	},
@@ -43,17 +43,21 @@ export const replyRelations = relations(reply, ({ one, many }) => ({
 		fields: [reply.userId],
 		references: [user.id],
 	}),
-	repliedUser: one(user, {
-		fields: [reply.repliedUserId],
+	parentReplyUser: one(user, {
+		fields: [reply.parentReplyUserId],
 		references: [user.id],
 	}),
 	comment: one(comment, {
 		fields: [reply.commentId],
 		references: [comment.id],
 	}),
-	repliedReply: one(reply, {
-		fields: [reply.replyId],
+	parentReply: one(reply, {
+		fields: [reply.parentReplyId],
 		references: [reply.id],
+		relationName: 'childReplies',
 	}),
 	likes: many(like),
+	childReplies: many(reply, {
+		relationName: 'childReplies',
+	}),
 }));

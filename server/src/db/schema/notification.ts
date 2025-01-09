@@ -1,7 +1,7 @@
-import { relations } from 'drizzle-orm';
-import { pgEnum, pgTable, uuid } from 'drizzle-orm/pg-core';
+import { relations, sql } from 'drizzle-orm';
+import { boolean, check, pgEnum, pgTable, uuid } from 'drizzle-orm/pg-core';
 import { timestamps } from './columns.helpers.js';
-import { comment, notificationUser, post, reply, user } from './index.js';
+import { comment, notificationReceiver, post, reply, user } from './index.js';
 
 export const notificationTypeEnum = pgEnum('notification_type', [
 	'friendRequest',
@@ -11,17 +11,28 @@ export const notificationTypeEnum = pgEnum('notification_type', [
 	'post',
 ]);
 
-export const notification = pgTable('notification', {
-	id: uuid().primaryKey().defaultRandom(),
-	userId: uuid()
-		.notNull()
-		.references(() => user.id, { onDelete: 'cascade' }),
-	postId: uuid().references(() => post.id, { onDelete: 'cascade' }),
-	commentId: uuid().references(() => comment.id, { onDelete: 'cascade' }),
-	replyId: uuid().references(() => reply.id, { onDelete: 'cascade' }),
-	type: notificationTypeEnum(),
-	...timestamps,
-});
+export const notification = pgTable(
+	'notification',
+	{
+		id: uuid().primaryKey().defaultRandom(),
+		receiverId: uuid().references(() => user.id, { onDelete: 'cascade' }),
+		senderId: uuid()
+			.notNull()
+			.references(() => post.id, { onDelete: 'cascade' }),
+		postId: uuid().references(() => post.id, { onDelete: 'cascade' }),
+		commentId: uuid().references(() => comment.id, { onDelete: 'cascade' }),
+		replyId: uuid().references(() => reply.id, { onDelete: 'cascade' }),
+		type: notificationTypeEnum(),
+		isBroadcast: boolean().default(false),
+		...timestamps,
+	},
+	(table) => [
+		check(
+			'notify_at_least_one_entity',
+			sql`${table.receiverId} IS NOT NULL OR ${table.postId} IS NOT NULL OR ${table.commentId} IS NOT NULL OR ${table.replyId} IS NOT NULL`
+		),
+	]
+);
 
 export const notificationRelations = relations(
 	notification,
@@ -38,6 +49,6 @@ export const notificationRelations = relations(
 			fields: [notification.replyId],
 			references: [reply.id],
 		}),
-		receivers: many(notificationUser),
+		receivers: many(notificationReceiver),
 	})
 );
