@@ -8,7 +8,9 @@ import {
 	UpdateHighschoolType,
 } from './highschool.zod.schemas.js';
 
-export const makeHighschool = async (data: CreateHighschoolType) => {
+export const makeHighschool = async (
+	data: CreateHighschoolType & { userId: SUUID }
+) => {
 	const newHighschool = await db
 		.insert(highschool)
 		.values({ ...data, userId: convertToUUID(data.userId) })
@@ -22,7 +24,9 @@ export const makeHighschool = async (data: CreateHighschoolType) => {
 	return newHighschoolWithSUUID[0];
 };
 
-export const updateHighschoolById = async (data: UpdateHighschoolType) => {
+export const updateHighschoolById = async (
+	data: UpdateHighschoolType & { id: SUUID; userId: SUUID }
+) => {
 	const { id, userId, ...goodData } = data;
 	const updatedHighschool = await db
 		.update(highschool)
@@ -65,4 +69,13 @@ export const deleteHighschoolById = async (data: {
 	}));
 
 	return deletedHighschoolWithSUUID[0];
+};
+
+export const highschoolExists = async (data: { id: SUUID }) => {
+	const school = await db
+		.select({ name: highschool.name })
+		.from(highschool)
+		.where(eq(highschool.id, data.id));
+
+	return school[0] ? true : false;
 };

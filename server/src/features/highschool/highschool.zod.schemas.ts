@@ -1,6 +1,5 @@
 import { highschool } from '@/db/schema/index.js';
 import { createInsertSchema } from 'drizzle-zod';
-import { SUUID } from 'short-uuid';
 
 export const createHighschoolSchema = createInsertSchema(highschool, {
 	name: (schema) =>
@@ -22,12 +21,8 @@ export const createHighschoolSchema = createInsertSchema(highschool, {
 	updatedAt: true,
 });
 
-export type CreateHighschoolType = typeof createHighschoolSchema._type & {
-	userId: SUUID;
-};
+export type CreateHighschoolType = typeof createHighschoolSchema._type;
 
 export type UpdateHighschoolType = typeof createHighschoolSchema._type & {
 	updatedAt: Date;
-	userId: SUUID;
-	id: SUUID;
 };
