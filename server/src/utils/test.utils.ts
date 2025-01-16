@@ -6,6 +6,7 @@ import { hash } from 'argon2';
 import { eq } from 'drizzle-orm';
 import { SUUID } from 'short-uuid';
 import type { Readable } from 'stream';
+import type { Response } from 'supertest';
 import { convertToSUUID, convertToUUID } from './general.utils.js';
 
 export const randomUserId = async (testEmails: string[], email?: string) => {
@@ -97,3 +98,9 @@ export const createTestFile = (fieldName: 'coverImage' | 'profileImage') => ({
 	buffer: 'mockBuffer' as unknown as Buffer,
 	filename: 'mockFilename',
 });
+
+export type SuperTestResponse<T> = Omit<Response, 'body'> & { body: T };
+export type ResponseWithError = SuperTestResponse<{ error: string }>;
+export type LoginResponseWithSuccess = SuperTestResponse<{
+	accessToken: string;
+}>;

@@ -75,7 +75,7 @@ export const highschoolExists = async (data: { id: SUUID }) => {
 	const school = await db
 		.select({ name: highschool.name })
 		.from(highschool)
-		.where(eq(highschool.id, data.id));
+		.where(eq(highschool.id, convertToUUID(data.id)));
 
 	return school[0] ? true : false;
 };

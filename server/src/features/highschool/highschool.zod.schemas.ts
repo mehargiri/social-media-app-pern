@@ -5,7 +5,7 @@ export const createHighschoolSchema = createInsertSchema(highschool, {
 	name: (schema) =>
 		schema.max(260, 'Name cannot be more than 260 characters').trim(),
 	description: (schema) =>
-		schema.max(1000, 'Description cannot be more than 1000 characters'),
+		schema.max(1000, 'Description cannot be more than 1000 characters').trim(),
 	startYear: (schema) =>
 		schema
 			.min(1900, 'Start Year cannot be less than 1900')

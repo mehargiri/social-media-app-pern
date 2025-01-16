@@ -1,4 +1,5 @@
 import authRoutes from '@/features/auth/auth.routes.js';
+import highschoolRoutes from '@/features/highschool/highschool.routes.js';
 import userRoutes from '@/features/user/user.routes.js';
 import cookieParser from 'cookie-parser';
 import express from 'express';
@@ -20,6 +21,7 @@ app.use(morgan('tiny'));
 // Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/user', userRoutes);
+app.use('/api/highschool', highschoolRoutes);
 
 app.use(errorHandler);
 
