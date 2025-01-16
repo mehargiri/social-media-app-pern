@@ -16,11 +16,6 @@ export default function (
 		return void res.sendStatus(err.cause as number);
 	}
 
-	if (!Number(err.cause) && err.message === 'Update') {
-		console.error(err.cause);
-		return void res.status(422).json({ error: err.message });
-	}
-
 	if (err instanceof MulterError) {
 		switch (err.code) {
 			case 'LIMIT_UNEXPECTED_FILE':

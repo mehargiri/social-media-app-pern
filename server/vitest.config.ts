@@ -7,15 +7,15 @@ export default defineConfig({
 		watch: false,
 		coverage: {
 			reporter: ['text', 'json', 'html'],
+			include: ['**/features/**', '**/middlewares/**', '**/utils/**'],
+			exclude: [
+				'**/*.services.ts',
+				'**/*.zod.schemas.ts',
+				'**/*.test.ts',
+				'**/test.utils.ts',
+				'**/dist/**',
+			],
 		},
 		// reporters: 'verbose',
-		exclude: [
-			'**/db-data/**',
-			'**/node_modules/**',
-			'**/public/**',
-			'**/db/**',
-			'**/{drizzle,eslint}.config.*',
-			'**/docker-compose.yml',
-		],
 	},
 });
