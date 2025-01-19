@@ -3,10 +3,16 @@ import app from '@/app.js';
 import { db } from '@/db/index.js';
 import { user } from '@/db/schema/index.js';
 import { updateUserById } from '@/features/user/user.services.js';
-import { getTestUserId, samplePassword, testUser } from '@/utils/test.utils.js';
+import {
+	getTestUserId,
+	LoginResponseWithSuccess,
+	ResponseWithError,
+	samplePassword,
+	testUser,
+} from '@/utils/test.utils.js';
 import { eq } from 'drizzle-orm';
 import { reset } from 'drizzle-seed';
-import supertest, { Response } from 'supertest';
+import supertest from 'supertest';
 import {
 	afterAll,
 	afterEach,
@@ -30,11 +36,6 @@ const getTestUserTokenArray = async (email: string) => {
 };
 
 describe('Auth Routes Integration Tests', () => {
-	type SuperTestResponse<T> = Omit<Response, 'body'> & { body: T };
-
-	type ResponseWithError = SuperTestResponse<{ error: string }>;
-	type ResponseWithSuccess = SuperTestResponse<{ accessToken: string }>;
-
 	beforeAll(async () => {
 		vi.stubEnv('NODE_ENV', 'test');
 		await db.insert(user).values(testUser);
@@ -53,13 +54,10 @@ describe('Auth Routes Integration Tests', () => {
 			status: number,
 			cookie?: string
 		) => {
-			const data = cookie
-				? await api
-						.post(testUrl)
-						.set('Cookie', cookie)
-						.send(loginDetails)
-						.expect(status)
-				: await api.post(testUrl).send(loginDetails).expect(status);
+			const testApi = api.post(testUrl).send(loginDetails);
+			if (cookie) testApi.set('Cookie', cookie);
+
+			const data = await testApi.expect(status);
 			return data;
 		};
 
@@ -98,7 +96,7 @@ describe('Auth Routes Integration Tests', () => {
 		});
 
 		it('should return accessToken as json, set refreshToken as cookie, and put refreshToken in user record on success', async () => {
-			const response: ResponseWithSuccess = await callTestRoute(
+			const response: LoginResponseWithSuccess = await callTestRoute(
 				{ email: testUser.email, password: samplePassword },
 				200
 			);
@@ -113,14 +111,16 @@ describe('Auth Routes Integration Tests', () => {
 			expect(tokenArray).toContain(cookieValue);
 		});
 
-		it('should clear the refresh token array in user record if a cookie already exists in the request and the cookie is present in the user refresh token array', async () => {
+		it('should empty the refresh token array of previous values in user record if a cookie already exists in the request and the cookie is not present in the user refresh token array', async () => {
 			vi.useFakeTimers({ shouldAdvanceTime: true });
+
 			const userId = await getTestUserId(testUser.email);
 			const oldRefreshToken = createRefreshToken(userId);
-			const oldCookie = `tk=${oldRefreshToken}`;
 			await updateUserById({ id: userId, refreshToken: [oldRefreshToken] });
+			vi.advanceTimersByTime(2 * 60 * 1000);
 
-			vi.advanceTimersByTime(15 * 60 * 1000);
+			const otherOldRefreshToken = createRefreshToken(userId);
+			const oldCookie = `tk=${otherOldRefreshToken}`;
 
 			const response = await callTestRoute(
 				{ email: testUser.email, password: samplePassword },
@@ -132,7 +132,7 @@ describe('Auth Routes Integration Tests', () => {
 			const cookieValue = cookie?.split('=')[1]?.split(';')[0];
 			const tokenArray = await getTestUserTokenArray(testUser.email);
 
-			expect(cookieValue).not.toEqual(oldRefreshToken);
+			expect(cookieValue).toEqual(otherOldRefreshToken);
 			expect(tokenArray).not.toContain(oldRefreshToken);
 			vi.useRealTimers();
 		});
@@ -142,9 +142,9 @@ describe('Auth Routes Integration Tests', () => {
 		const testUrl = '/api/auth/logout';
 
 		const callTestRoute = async (cookie?: string) => {
-			const data = cookie
-				? await api.post(testUrl).set('Cookie', cookie).expect(204)
-				: await api.post(testUrl).expect(204);
+			const testApi = api.post(testUrl);
+			if (cookie) testApi.set('Cookie', cookie);
+			const data = await testApi.expect(204);
 
 			const cookies = data.headers['set-cookie'];
 			const cookieValue = cookies?.at(0)?.split('=')[1]?.split(';')[0];
@@ -187,9 +187,10 @@ describe('Auth Routes Integration Tests', () => {
 		const testUrl = '/api/auth/refresh';
 
 		const callTestRoute = async (status: number, cookie?: string) => {
-			const data = cookie
-				? await api.post(testUrl).set('Cookie', cookie).expect(status)
-				: await api.post(testUrl).expect(status);
+			const testApi = api.post(testUrl);
+			if (cookie) testApi.set('Cookie', cookie);
+
+			const data = await testApi.expect(status);
 			return data;
 		};
 
@@ -259,7 +260,10 @@ describe('Auth Routes Integration Tests', () => {
 
 			const oldCookie = `tk=${oldRefreshToken}`;
 
-			const response: ResponseWithSuccess = await callTestRoute(200, oldCookie);
+			const response: LoginResponseWithSuccess = await callTestRoute(
+				200,
+				oldCookie
+			);
 
 			const cookies = response.headers['set-cookie'];
 			const clearedCookie = cookies?.at(0)?.split('=')[1]?.split(';')[0];

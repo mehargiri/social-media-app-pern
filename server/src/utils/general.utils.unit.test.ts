@@ -168,33 +168,6 @@ describe('General Utils Functions', () => {
 					})
 				);
 			});
-
-			it.each([[0.9 * 1024 * 1024], [1 * 1024 * 1024]])(
-				'should allow file with size <= 1 MB, size:%i',
-				(fileSize) => {
-					fileFilter(
-						req,
-						{ ...mockFile, size: fileSize },
-						mockCallbackFileFilter
-					);
-
-					expect(mockCallbackFileFilter).toHaveBeenCalledWith(null, true);
-				}
-			);
-
-			it('should throw Multer Error with size >= 1 MB, size: 2MB', () => {
-				fileFilter(
-					req,
-					{ ...mockFile, size: 2 * 1024 * 1024 },
-					mockCallbackFileFilter
-				);
-				expect(mockCallbackFileFilter).toHaveBeenCalledWith(
-					expect.objectContaining({
-						code: 'LIMIT_FILE_SIZE',
-						field: mockFile.fieldname,
-					})
-				);
-			});
 		});
 	});
 });

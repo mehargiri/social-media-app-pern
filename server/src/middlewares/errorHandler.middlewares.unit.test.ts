@@ -58,7 +58,7 @@ describe('errorHandler Middleware Function', () => {
 
 		expect(res.status).toHaveBeenCalledWith(400);
 		expect(res.json).toHaveBeenCalledWith({
-			error: 'File size exceeds the limit. Allowed max: 10MB',
+			error: 'File size exceeds the limit. Allowed max: 1MB',
 		});
 	});
 

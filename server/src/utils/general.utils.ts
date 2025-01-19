@@ -82,9 +82,5 @@ export const fileFilter = (
 		callback(new MulterError('LIMIT_UNEXPECTED_FILE', file.fieldname));
 	}
 
-	if (file.size > maxFileSize) {
-		callback(new MulterError('LIMIT_FILE_SIZE', file.fieldname));
-	}
-
 	callback(null, true);
 };

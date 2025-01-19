@@ -23,7 +23,7 @@ const router = Router();
 const upload = multer({
 	storage: fileStorage,
 	fileFilter: fileFilter,
-	limits: { fieldSize: maxFileSize },
+	limits: { fileSize: maxFileSize },
 });
 
 router.get('/', tokenHandler, getUsersByName);

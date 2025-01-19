@@ -147,7 +147,6 @@ describe('Authentication Controller Functions', () => {
 
 		beforeEach(() => {
 			req.cookies.tk = oldRefreshToken;
-			(userTokenExists as Mock).mockResolvedValue(userData);
 			(updateUserById as Mock).mockResolvedValue({ id: userData.id });
 			vi.clearAllMocks();
 		});
@@ -173,6 +172,8 @@ describe('Authentication Controller Functions', () => {
 		});
 
 		it('should clear refresh token from user record if the refresh token is present in the user record', async () => {
+			(userTokenExists as Mock).mockResolvedValue(userData);
+
 			await callTestFn();
 
 			expect(updateUserById).toHaveBeenCalledWith({
@@ -182,12 +183,14 @@ describe('Authentication Controller Functions', () => {
 		});
 
 		it('should clear refresh token cookie', async () => {
+			(userTokenExists as Mock).mockResolvedValue(userData);
 			await callTestFn();
 
 			expect(clearRefreshTokenCookie).toHaveBeenCalledWith(res);
 		});
 
 		it('should call res.sendStatus with HTTP 204', async () => {
+			(userTokenExists as Mock).mockResolvedValue(userData);
 			await callTestFn();
 
 			expect(res.sendStatus).toHaveBeenCalledWith(204);

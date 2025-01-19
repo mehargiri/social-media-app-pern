@@ -27,7 +27,7 @@ export default function (
 			case 'LIMIT_FILE_SIZE':
 				return void res
 					.status(400)
-					.json({ error: 'File size exceeds the limit. Allowed max: 10MB' });
+					.json({ error: 'File size exceeds the limit. Allowed max: 1MB' });
 		}
 	}
 

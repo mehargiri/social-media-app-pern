@@ -6,7 +6,7 @@ export default defineConfig({
 	test: {
 		watch: false,
 		coverage: {
-			reporter: ['text', 'json', 'html'],
+			reporter: ['text'],
 			include: ['**/features/**', '**/middlewares/**', '**/utils/**'],
 			exclude: [
 				'**/*.services.ts',

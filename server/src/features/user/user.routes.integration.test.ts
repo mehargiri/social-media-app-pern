@@ -15,16 +15,27 @@ import {
 	createTestUser,
 	createTestWork,
 	getTestUserId,
+	LoginResponseWithSuccess,
 	randomUserId,
+	ResponseWithError,
 	samplePassword,
+	SuperTestResponse,
 	testUser,
 } from '@/utils/test.utils.js';
 import { reset } from 'drizzle-seed';
 import { mkdir, rm } from 'fs/promises';
 import { join } from 'path';
 import { generate, SUUID } from 'short-uuid';
-import supertest, { Response } from 'supertest';
-import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
+import supertest from 'supertest';
+import {
+	afterAll,
+	beforeAll,
+	beforeEach,
+	describe,
+	expect,
+	it,
+	vi,
+} from 'vitest';
 import { findUserById, findUsersByName } from './user.services.js';
 
 // eslint-disable-next-line @typescript-eslint/no-misused-promises
@@ -44,10 +55,6 @@ const testWork = createTestWork();
 const testHighSchool = createTestHighSchool();
 
 describe('User Routes Integration Tests', () => {
-	type SuperTestResponse<T> = Omit<Response, 'body'> & { body: T };
-	type ResponseWithError = SuperTestResponse<{ error: string }>;
-	type LoginResponseWithSuccess = SuperTestResponse<{ accessToken: string }>;
-
 	type getUserResponseSuccess = NonNullable<
 		Awaited<ReturnType<typeof findUserById>>
 	>;
@@ -101,14 +108,24 @@ describe('User Routes Integration Tests', () => {
 		const testUrl = '/api/user/me';
 
 		const callTestRoute = async (status: number, token?: string) => {
-			const data = token
-				? await api.get(testUrl).auth(token, { type: 'bearer' }).expect(status)
-				: await api.get(testUrl).expect(status);
+			const testApi = api.get(testUrl);
+			if (token) testApi.auth(token, { type: 'bearer' });
+			const data = await testApi.expect(status);
 			return data;
 		};
 
 		it('should throw HTTP 401 if the route is accessed without auth token', async () => {
 			await callTestRoute(401);
+		});
+
+		it('should throw HTTP 403 if the route is accessed with an expired token', async () => {
+			vi.useFakeTimers({ shouldAdvanceTime: true });
+
+			vi.advanceTimersByTime(2 * 60 * 1000);
+
+			await callTestRoute(403, authToken);
+
+			vi.useRealTimers();
 		});
 
 		it('should return HTTP 400 and a message when the provided id is invalid (not SUUID)', async () => {
@@ -158,17 +175,24 @@ describe('User Routes Integration Tests', () => {
 			token?: string,
 			id: string = userId
 		) => {
-			const data = token
-				? await api
-						.get(`/api/user/${id}`)
-						.auth(token, { type: 'bearer' })
-						.expect(status)
-				: await api.get(`/api/user/${id}`).expect(status);
+			const testApi = api.get(`/api/user/${id}`);
+			if (token) testApi.auth(token, { type: 'bearer' });
+			const data = await testApi.expect(status);
 			return data;
 		};
 
 		it('should throw HTTP 401 if the route is accessed without auth token', async () => {
 			await callTestRoute(401);
+		});
+
+		it('should throw HTTP 403 if the route is accessed with an expired token', async () => {
+			vi.useFakeTimers({ shouldAdvanceTime: true });
+
+			vi.advanceTimersByTime(2 * 60 * 1000);
+
+			await callTestRoute(403, authToken);
+
+			vi.useRealTimers();
 		});
 
 		it('should return HTTP 400 and a message when the provided id is invalid (not SUUID)', async () => {
@@ -223,18 +247,24 @@ describe('User Routes Integration Tests', () => {
 			token?: string,
 			queryValue?: string
 		) => {
-			const data = token
-				? await api
-						.get(testUrlBase)
-						.auth(token, { type: 'bearer' })
-						.query({ name: queryValue })
-						.expect(status)
-				: await api.get(testUrlBase).query({ name: queryValue }).expect(status);
+			const testApi = api.get(testUrlBase);
+			if (token) testApi.auth(token, { type: 'bearer' });
+			const data = await testApi.query({ name: queryValue }).expect(status);
 			return data;
 		};
 
 		it('should throw HTTP 401 if the route is accessed without login', async () => {
 			await callTestRoute(401, undefined, testName);
+		});
+
+		it('should throw HTTP 403 if the route is accessed with an expired token', async () => {
+			vi.useFakeTimers({ shouldAdvanceTime: true });
+
+			vi.advanceTimersByTime(2 * 60 * 1000);
+
+			await callTestRoute(403, authToken);
+
+			vi.useRealTimers();
 		});
 
 		it('should return HTTP 400 and a message when name is not provided', async () => {
@@ -383,12 +413,36 @@ describe('User Routes Integration Tests', () => {
 		const tempUser = { ...testUsers[0] };
 		const filePath = join(
 			__dirname,
-			'../../../public/blank-profile-picture.png'
+			'../../testAssets/blank-profile-picture.png'
+		);
+
+		const badExtensionFilePath = join(
+			__dirname,
+			'../../testAssets/blank-profile-picture-heic.heic'
+		);
+
+		const tooBigFilePath = join(
+			__dirname,
+			'../../testAssets/blank-profile-picture-too-big.png'
 		);
 
 		it('should throw HTTP 401 if the route is accessed without login', async () => {
 			await api.patch(`/api/user/${userId}`).field(tempUser).expect(401);
 		}, 6000);
+
+		it('should throw HTTP 403 if the route is accessed with an expired token', async () => {
+			vi.useFakeTimers({ shouldAdvanceTime: true });
+
+			vi.advanceTimersByTime(2 * 60 * 1000);
+
+			await api
+				.patch(`/api/user/${userId}`)
+				.auth(authToken, { type: 'bearer' })
+				.field(tempUser)
+				.expect(403);
+
+			vi.useRealTimers();
+		});
 
 		it('should return HTTP 400 and a message when the provided id is invalid (not SUUID)', async () => {
 			const response: ResponseWithError = await api
@@ -410,6 +464,32 @@ describe('User Routes Integration Tests', () => {
 				.expect(404);
 
 			expect(response.body.error).toEqual('User does not exist');
+		});
+
+		it('should return HTTP 400 and a message when attached image is not an approved filetypes: png and jpeg', async () => {
+			const response: ResponseWithError = await api
+				.patch(`/api/user/${userId}`)
+				.auth(authToken, { type: 'bearer' })
+				.field(tempUser)
+				.attach('coverImage', badExtensionFilePath)
+				.expect(400);
+
+			expect(response.body.error).toEqual(
+				'Invalid file type. Allowed: png and jpg/jpeg. Invalid file in coverImage'
+			);
+		});
+
+		it('should return HTTP 400 and a message when attached image is too big', async () => {
+			const response: ResponseWithError = await api
+				.patch(`/api/user/${userId}`)
+				.auth(authToken, { type: 'bearer' })
+				.field(tempUser)
+				.attach('coverImage', tooBigFilePath)
+				.expect(400);
+
+			expect(response.body.error).toEqual(
+				'File size exceeds the limit. Allowed max: 1MB'
+			);
 		});
 
 		it('should return SUUID of the updated user on success with only coverImage attached', async () => {
@@ -450,6 +530,19 @@ describe('User Routes Integration Tests', () => {
 	describe('Delete user with id route', () => {
 		it('should throw HTTP 401 if the route is accessed without login', async () => {
 			await api.delete(`/api/user/${userId}`).expect(401);
+		});
+
+		it('should throw HTTP 403 if the route is accessed with an expired token', async () => {
+			vi.useFakeTimers({ shouldAdvanceTime: true });
+
+			vi.advanceTimersByTime(2 * 60 * 1000);
+
+			await api
+				.delete(`/api/user/${userId}`)
+				.auth(authToken, { type: 'bearer' })
+				.expect(403);
+
+			vi.useRealTimers();
 		});
 
 		it('should return HTTP 400 and a message when the provided id is invalid (not SUUID)', async () => {
