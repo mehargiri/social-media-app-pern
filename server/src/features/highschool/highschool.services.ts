@@ -11,9 +11,10 @@ import {
 export const makeHighschool = async (
 	data: CreateHighschoolType & { userId: SUUID }
 ) => {
+	const { userId, ...goodData } = data;
 	const newHighschool = await db
 		.insert(highschool)
-		.values({ ...data, userId: convertToUUID(data.userId) })
+		.values({ ...goodData, userId: convertToUUID(userId) })
 		.returning({ id: highschool.id });
 
 	const newHighschoolWithSUUID = newHighschool.map((school) => ({
