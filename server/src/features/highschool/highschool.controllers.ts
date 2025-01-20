@@ -37,6 +37,7 @@ export const updateHighschool = async (
 		...req.body,
 		userId: req.userId as SUUID,
 		id,
+		updatedAt: new Date(),
 	});
 
 	return void res.json(updatedHighschool);
