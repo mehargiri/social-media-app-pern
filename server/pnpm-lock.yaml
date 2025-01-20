@@ -14,15 +14,9 @@ importers:
       cookie-parser:
         specifier: ^1.4.7
         version: 1.4.7
-      cpy-cli:
-        specifier: ^5.0.0
-        version: 5.0.0
       cross-env:
         specifier: ^7.0.3
         version: 7.0.3
-      del-cli:
-        specifier: ^6.0.0
-        version: 6.0.0
       dotenv:
         specifier: ^16.4.7
         version: 16.4.7
@@ -102,6 +96,12 @@ importers:
       '@vitest/coverage-v8':
         specifier: ^3.0.1
         version: 3.0.1(vitest@3.0.1(@types/node@22.10.7)(tsx@4.19.2))
+      cpy-cli:
+        specifier: ^5.0.0
+        version: 5.0.0
+      del-cli:
+        specifier: ^6.0.0
+        version: 6.0.0
       drizzle-kit:
         specifier: ^0.30.2
         version: 0.30.2
@@ -114,6 +114,9 @@ importers:
       eslint-config-prettier:
         specifier: ^10.0.1
         version: 10.0.1(eslint@9.18.0)
+      make-dir-cli:
+        specifier: ^4.0.0
+        version: 4.0.0
       supertest:
         specifier: ^7.0.0
         version: 7.0.0
@@ -1977,9 +1980,18 @@ packages:
   magicast@0.3.5:
     resolution: {integrity: sha512-L0WhttDl+2BOsybvEOLK7fW3UA0OQ0IQ2d6Zl2x/a6vVRs3bAY0ECOSHHeL5jD+SbOpOCUEi0y1DgHEn9Qn1AQ==}
 
+  make-dir-cli@4.0.0:
+    resolution: {integrity: sha512-9BBC2CaGH0hUAx+tQthgxqYypwkTs+7oXmPdiWyDpHGo4mGB3kdudUKQGivK59C1aJroo4QLlXF7Chu/kdhYiw==}
+    engines: {node: '>=18'}
+    hasBin: true
+
   make-dir@4.0.0:
     resolution: {integrity: sha512-hXdUTZYIVOt1Ex//jAQi+wTZZpUpwBj/0QsOzqegb3rGMMeJiSEu5xLHnYfBrRV4RH2+OCSOO95Is/7x1WJ4bw==}
     engines: {node: '>=10'}
+
+  make-dir@5.0.0:
+    resolution: {integrity: sha512-G0yBotnlWVonPClw+tq+xi4K7DZC9n96HjGTBDdHkstAVsDkfZhi1sTvZypXLpyQTbISBkDtK0E5XlUqDsShQg==}
+    engines: {node: '>=18'}
 
   math-intrinsics@1.1.0:
     resolution: {integrity: sha512-/IXtbwEk5HTPyEwyKX6hGkYXxM9nbj64B+ilVJnC/R6B0pH5G4V3b0pVbL7DBj4tkhBAppbQUlf6F6Xl9LHu1g==}
@@ -4267,9 +4279,16 @@ snapshots:
       '@babel/types': 7.26.5
       source-map-js: 1.2.1
 
+  make-dir-cli@4.0.0:
+    dependencies:
+      make-dir: 5.0.0
+      meow: 13.2.0
+
   make-dir@4.0.0:
     dependencies:
       semver: 7.6.3
+
+  make-dir@5.0.0: {}
 
   math-intrinsics@1.1.0: {}
 
