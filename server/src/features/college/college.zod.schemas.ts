@@ -29,8 +29,4 @@ export const createCollegeSchema = createInsertSchema(college, {
 	updatedAt: true,
 });
 
-export type CreateCollegeType = typeof createCollegeSchema._type;
-
-export type UpdateCollegeType = typeof createCollegeSchema._type & {
-	updatedAt: Date;
-};
+export type CollegeType = typeof createCollegeSchema._type;

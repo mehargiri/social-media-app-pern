@@ -3,11 +3,9 @@ import { college } from '@/db/schema/index.js';
 import { convertToSUUID, convertToUUID } from '@/utils/general.utils.js';
 import { and, eq } from 'drizzle-orm';
 import { SUUID } from 'short-uuid';
-import { CreateCollegeType, UpdateCollegeType } from './college.zod.schemas.js';
+import { CollegeType } from './college.zod.schemas.js';
 
-export const makeCollege = async (
-	data: CreateCollegeType & { userId: SUUID }
-) => {
+export const makeCollege = async (data: CollegeType & { userId: SUUID }) => {
 	const { userId, ...goodData } = data;
 	const newCollege = await db
 		.insert(college)
@@ -23,7 +21,7 @@ export const makeCollege = async (
 };
 
 export const updateCollegeById = async (
-	data: UpdateCollegeType & { id: SUUID; userId: SUUID }
+	data: CollegeType & { id: SUUID; userId: SUUID; updatedAt: Date }
 ) => {
 	const { id, userId, ...goodData } = data;
 	const updatedCollege = await db
