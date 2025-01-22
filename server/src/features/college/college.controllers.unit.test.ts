@@ -61,13 +61,13 @@ describe('College Controller Functions', () => {
 			);
 		};
 
-		it('should throw Error if the provided id in req.params is invalid', async () => {
+		it('should throw Error when the provided id in req.params is invalid', async () => {
 			await expect(callTestFn('random-id' as SUUID)).rejects.toThrowError(
 				Error('Valid id is required', { cause: 400 })
 			);
 		});
 
-		it('should throw Error if the provided id in req.params does not exist', async () => {
+		it('should throw Error when the provided id in req.params does not exist', async () => {
 			await expect(callTestFn(generate())).rejects.toThrowError(
 				Error('College does not exist', { cause: 404 })
 			);
@@ -95,13 +95,13 @@ describe('College Controller Functions', () => {
 			);
 		};
 
-		it('should throw Error if the provided id in req.params is invalid', async () => {
+		it('should throw Error when the provided id in req.params is invalid', async () => {
 			await expect(callTestFn('random-id' as SUUID)).rejects.toThrowError(
 				Error('Valid id is required', { cause: 400 })
 			);
 		});
 
-		it('should throw Error if the provided id in req.params does not exist', async () => {
+		it('should throw Error when the provided id in req.params does not exist', async () => {
 			await expect(callTestFn(generate())).rejects.toThrowError(
 				Error('College does not exist', { cause: 404 })
 			);

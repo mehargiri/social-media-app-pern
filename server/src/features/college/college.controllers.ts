@@ -49,5 +49,5 @@ export const deleteCollege = async (
 
 	await deleteCollegeById({ id, userId: req.userId as SUUID });
 
-	return void res.json({ message: 'College deleted successfully!' });
+	return void res.json({ message: 'College deleted successfully' });
 };
