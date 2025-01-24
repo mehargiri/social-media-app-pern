@@ -113,7 +113,7 @@ describe('College Controller Functions', () => {
 
 			await callTestFn(sampleSUUID);
 			expect(res.json).toHaveBeenCalledWith({
-				message: 'College deleted successfully!',
+				message: 'College deleted successfully',
 			});
 		});
 	});
