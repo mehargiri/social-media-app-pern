@@ -17,6 +17,5 @@ export {
 	notificationReceiverRelations,
 } from './notificationReceiver.js';
 export { post, postRelations } from './post.js';
-export { reply, replyRelations } from './reply.js';
 export { user, userGenderEnum, userRelations } from './user.js';
 export { work, workRelations } from './work.js';
