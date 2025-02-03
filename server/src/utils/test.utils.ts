@@ -9,6 +9,19 @@ import type { Readable } from 'stream';
 import type { Response } from 'supertest';
 import { convertToSUUID, convertToUUID } from './general.utils.js';
 
+export type SuperTestResponse<T> = Omit<Response, 'body'> & { body: T };
+export type ResponseWithError = SuperTestResponse<{ error: string }>;
+export type LoginResponseWithSuccess = SuperTestResponse<{
+	accessToken: string;
+}>;
+
+export type HTTPError400TestsType<T> = [
+	test_description: string,
+	property: keyof T,
+	obj: Partial<Record<keyof T, T[keyof T]>>,
+	errMessage: string
+];
+
 export const randomUserId = async (testEmails: string[], email?: string) => {
 	const userEmails = email
 		? testEmails.filter((testEmail) => testEmail !== email)
@@ -98,9 +111,3 @@ export const createTestFile = (fieldName: 'coverImage' | 'profileImage') => ({
 	buffer: 'mockBuffer' as unknown as Buffer,
 	filename: 'mockFilename',
 });
-
-export type SuperTestResponse<T> = Omit<Response, 'body'> & { body: T };
-export type ResponseWithError = SuperTestResponse<{ error: string }>;
-export type LoginResponseWithSuccess = SuperTestResponse<{
-	accessToken: string;
-}>;

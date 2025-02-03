@@ -13,10 +13,7 @@ import {
 	makeHighschool,
 	updateHighschoolById,
 } from './highschool.services.js';
-import {
-	CreateHighschoolType,
-	UpdateHighschoolType,
-} from './highschool.zod.schemas.js';
+import { HighschoolType } from './highschool.zod.schemas.js';
 
 const testHighschool = createTestHighSchool();
 testHighschool.userId = sampleSUUID;
@@ -48,7 +45,7 @@ describe('Highschool Controller Functions', () => {
 		it('should call makeHighschool and res.sendStatus with HTTP 201 on success', async () => {
 			(makeHighschool as Mock).mockResolvedValue({ id: sampleSUUID });
 			await createHighschool(
-				req as unknown as Request<never, never, CreateHighschoolType>,
+				req as unknown as Request<never, never, HighschoolType>,
 				res as unknown as Response
 			);
 
@@ -64,7 +61,7 @@ describe('Highschool Controller Functions', () => {
 		const callTestFn = async (id: SUUID) => {
 			req.params.id = id;
 			await updateHighschool(
-				req as unknown as Request<{ id: SUUID }, never, UpdateHighschoolType>,
+				req as unknown as Request<{ id: SUUID }, never, HighschoolType>,
 				res as unknown as Response
 			);
 		};

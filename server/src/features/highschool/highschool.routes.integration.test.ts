@@ -4,6 +4,7 @@ import { highschool, user } from '@/db/schema/index.js';
 import { convertToSUUID } from '@/utils/general.utils.js';
 import {
 	createTestUser,
+	HTTPError400TestsType,
 	LoginResponseWithSuccess,
 	ResponseWithError,
 	samplePassword,
@@ -13,8 +14,8 @@ import {
 import { reset } from 'drizzle-seed';
 import { SUUID } from 'short-uuid';
 import supertest from 'supertest';
-import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { CreateHighschoolType } from './highschool.zod.schemas.js';
+import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
+import { HighschoolType } from './highschool.zod.schemas.js';
 
 const testUser = createTestUser();
 const sampleHighschool = {
@@ -28,22 +29,7 @@ const sampleHighschool = {
 // eslint-disable-next-line @typescript-eslint/no-misused-promises
 const api = supertest(app);
 
-type HighschoolPropertyType = keyof Omit<CreateHighschoolType, 'graduated'>;
-
-type HighschoolPropertyValue<P extends HighschoolPropertyType> = P extends
-	| 'name'
-	| 'description'
-	? string
-	: number;
-
-type Highschool400Error<P extends HighschoolPropertyType> = [
-	test_description: string,
-	property: P,
-	obj: Partial<Record<P, HighschoolPropertyValue<P>>>,
-	errMessage: string
-];
-
-const highschool400Errors: Highschool400Error<HighschoolPropertyType>[] = [
+const highschool400Errors: HTTPError400TestsType<HighschoolType>[] = [
 	[
 		'name is more than 260 characters',
 		'name',
@@ -103,7 +89,7 @@ describe('Highschool Routes Integration Tests', () => {
 		await reset(db, { user, highschool });
 	});
 
-	const callTestFn = async (
+	const callTestRoute = async (
 		type: 'create' | 'update',
 		url: string,
 		status: number,
@@ -131,13 +117,21 @@ describe('Highschool Routes Integration Tests', () => {
 		const testUrl = '/api/highschool';
 
 		it('should throw HTTP 401 when the route is accessed without auth token', async () => {
-			await callTestFn('create', testUrl, 401);
+			await callTestRoute('create', testUrl, 401);
+		});
+
+		it('should throw HTTP 403 when the route is accessed with an expired auth token', async () => {
+			vi.useFakeTimers({ shouldAdvanceTime: true });
+			vi.advanceTimersByTime(2 * 60 * 1000);
+
+			await callTestRoute('create', testUrl, 403, authToken);
+			vi.useRealTimers();
 		});
 
 		it.each(highschool400Errors)(
 			'should throw HTTP 400 and a message when the highschool %s',
 			async (_testDescription, property, obj, errMessage) => {
-				await callTestFn(
+				await callTestRoute(
 					'create',
 					testUrl,
 					400,
@@ -151,13 +145,13 @@ describe('Highschool Routes Integration Tests', () => {
 		it('should return with HTTP 201 even when a field is missing', async () => {
 			// eslint-disable-next-line @typescript-eslint/no-unused-vars
 			const { graduated, ...highschoolData } = sampleHighschool;
-			await callTestFn('create', testUrl, 201, authToken, highschoolData);
+			await callTestRoute('create', testUrl, 201, authToken, highschoolData);
 
 			await reset(db, { highschool });
 		});
 
 		it('should return with HTTP 201 on success', async () => {
-			await callTestFn('create', testUrl, 201, authToken, sampleHighschool);
+			await callTestRoute('create', testUrl, 201, authToken, sampleHighschool);
 		});
 	});
 
@@ -176,11 +170,19 @@ describe('Highschool Routes Integration Tests', () => {
 		});
 
 		it('should throw HTTP 401 when the route is accessed without auth token', async () => {
-			await callTestFn('update', testUrl, 401);
+			await callTestRoute('update', testUrl, 401);
+		});
+
+		it('should throw HTTP 403 when the route is accessed with an expired auth token', async () => {
+			vi.useFakeTimers({ shouldAdvanceTime: true });
+			vi.advanceTimersByTime(2 * 60 * 1000);
+
+			await callTestRoute('update', testUrl, 403, authToken);
+			vi.useRealTimers();
 		});
 
 		it('should throw HTTP 400 and a message when the highschool id is not valid', async () => {
-			await callTestFn(
+			await callTestRoute(
 				'update',
 				'/api/highschool/random-id',
 				400,
@@ -191,7 +193,7 @@ describe('Highschool Routes Integration Tests', () => {
 		});
 
 		it('should throw HTTP 404 and a message when the highschool id is valid but does not exist', async () => {
-			await callTestFn(
+			await callTestRoute(
 				'update',
 				`/api/highschool/${sampleSUUID}`,
 				404,
@@ -204,7 +206,7 @@ describe('Highschool Routes Integration Tests', () => {
 		it.each(highschool400Errors)(
 			'should throw HTTP 400 and a message when the highschool %s',
 			async (_testDescription, property, obj, errMessage) => {
-				await callTestFn(
+				await callTestRoute(
 					'update',
 					testUrl,
 					400,
@@ -219,7 +221,7 @@ describe('Highschool Routes Integration Tests', () => {
 			// eslint-disable-next-line @typescript-eslint/no-unused-vars
 			const { graduated, ...highschoolData } = sampleHighschool;
 
-			const response: SuperTestResponse<{ id: SUUID }> = await callTestFn(
+			const response: SuperTestResponse<{ id: SUUID }> = await callTestRoute(
 				'update',
 				testUrl,
 				200,
@@ -231,7 +233,7 @@ describe('Highschool Routes Integration Tests', () => {
 		});
 
 		it('should return highschool id on success', async () => {
-			const response: SuperTestResponse<{ id: SUUID }> = await callTestFn(
+			const response: SuperTestResponse<{ id: SUUID }> = await callTestRoute(
 				'update',
 				testUrl,
 				200,
@@ -259,6 +261,14 @@ describe('Highschool Routes Integration Tests', () => {
 
 		it('should throw HTTP 401 when the route is accessed without auth token', async () => {
 			await api.delete(testUrl).expect(401);
+		});
+
+		it('should throw HTTP 403 when the route is accessed with an expired auth token', async () => {
+			vi.useFakeTimers({ shouldAdvanceTime: true });
+			vi.advanceTimersByTime(2 * 60 * 1000);
+
+			await api.delete(testUrl).auth(authToken, { type: 'bearer' }).expect(403);
+			vi.useRealTimers();
 		});
 
 		it('should throw HTTP 400 and a message when the highschool id is not valid', async () => {
