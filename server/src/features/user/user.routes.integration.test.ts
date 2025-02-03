@@ -15,6 +15,7 @@ import {
 	createTestUser,
 	createTestWork,
 	getTestUserId,
+	HTTPError400TestsType,
 	LoginResponseWithSuccess,
 	randomUserId,
 	ResponseWithError,
@@ -27,16 +28,9 @@ import { mkdir, rm } from 'fs/promises';
 import { join } from 'path';
 import { generate, SUUID } from 'short-uuid';
 import supertest from 'supertest';
-import {
-	afterAll,
-	beforeAll,
-	beforeEach,
-	describe,
-	expect,
-	it,
-	vi,
-} from 'vitest';
+import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import { findUserById, findUsersByName } from './user.services.js';
+import { UserType } from './user.zod.schemas.js';
 
 // eslint-disable-next-line @typescript-eslint/no-misused-promises
 const api = supertest(app);
@@ -53,6 +47,118 @@ const testUsers = Array.from({ length: ARRAY_LENGTH }, createTestUser).map(
 const testCollege = createTestCollege();
 const testWork = createTestWork();
 const testHighSchool = createTestHighSchool();
+
+const userHTTP400Errors: HTTPError400TestsType<UserType>[] = [
+	[
+		'first name is empty',
+		'firstName',
+		{ firstName: '' },
+		'firstName: First Name is required',
+	],
+	[
+		'first name is more than 260 characters',
+		'firstName',
+		{ firstName: 'A'.repeat(261) },
+		'firstName: First Name cannot be more than 260 characters',
+	],
+	[
+		'last name is empty',
+		'lastName',
+		{ lastName: '' },
+		'lastName: Last Name is required',
+	],
+	[
+		'last name is more than 260 characters',
+		'lastName',
+		{ lastName: 'A'.repeat(261) },
+		'lastName: Last Name cannot be more than 260 characters',
+	],
+	['email is empty', 'email', { email: '' }, 'email: Email is required'],
+	[
+		'email is not valid',
+		'email',
+		{ email: 'email.com' },
+		'email: Email must be valid',
+	],
+	[
+		'password is empty',
+		'password',
+		{ password: '' },
+		'password: Password is required and must be minimum of 8 characters',
+	],
+	[
+		'password is less than 8 characters',
+		'password',
+		{ password: 'A'.repeat(7) },
+		'password: Password is required and must be minimum of 8 characters',
+	],
+	[
+		'password has no uppercase but length is more than 8 characters',
+		'password',
+		{ password: 'mypassword1@' },
+		'password: Stronger password is required. The password must have one uppercase, one lowercase, one number and one special character and no spaces',
+	],
+	[
+		'password has no number but length is more than 8 characters',
+		'password',
+		{ password: 'Mypassword@' },
+		'password: Stronger password is required. The password must have one uppercase, one lowercase, one number and one special character and no spaces',
+	],
+	[
+		'password has no special character but length is more than 8 characters',
+		'password',
+		{ password: 'Mypassword1' },
+		'password: Stronger password is required. The password must have one uppercase, one lowercase, one number and one special character and no spaces',
+	],
+	[
+		'password has no special character but length is more than 8 characters',
+		'password',
+		{ password: 'Mypassword1' },
+		'password: Stronger password is required. The password must have one uppercase, one lowercase, one number and one special character and no spaces',
+	],
+	[
+		'password has a space in the middle but length is more than 8 characters',
+		'password',
+		{ password: 'My password1@' },
+		'password: Stronger password is required. The password must have one uppercase, one lowercase, one number and one special character and no spaces',
+	],
+	[
+		'phone is in the wrong format',
+		'phone',
+		{ phone: '1234567890' },
+		'phone: Phone number must be in format XXX-XXX-XXXX',
+	],
+	[
+		'birthday is in the wrong format',
+		'birthday',
+		{ birthday: '20200101' },
+		'birthday: Birthday must be valid date in YYYY-MM-DD format',
+	],
+	[
+		'birthday is not a valid date',
+		'birthday',
+		{ birthday: '2020-01-32' },
+		'birthday: Birthday must be valid date in YYYY-MM-DD format',
+	],
+	[
+		'bio is more than 1000 characters',
+		'bio',
+		{ bio: 'A'.repeat(1001) },
+		'bio: Bio cannot be more than 1000 characters',
+	],
+	[
+		'current city is more than 260 characters',
+		'currentCity',
+		{ currentCity: 'A'.repeat(261) },
+		'currentCity: Current city cannot be more than 260 characters',
+	],
+	[
+		'hometown is more than 260 characters',
+		'hometown',
+		{ hometown: 'A'.repeat(261) },
+		'hometown: Hometown cannot be more than 260 characters',
+	],
+];
 
 describe('User Routes Integration Tests', () => {
 	type getUserResponseSuccess = NonNullable<
@@ -114,11 +220,11 @@ describe('User Routes Integration Tests', () => {
 			return data;
 		};
 
-		it('should throw HTTP 401 if the route is accessed without auth token', async () => {
+		it('should throw HTTP 401 when the route is accessed without auth token', async () => {
 			await callTestRoute(401);
 		});
 
-		it('should throw HTTP 403 if the route is accessed with an expired token', async () => {
+		it('should throw HTTP 403 when the route is accessed with an expired token', async () => {
 			vi.useFakeTimers({ shouldAdvanceTime: true });
 
 			vi.advanceTimersByTime(2 * 60 * 1000);
@@ -181,11 +287,11 @@ describe('User Routes Integration Tests', () => {
 			return data;
 		};
 
-		it('should throw HTTP 401 if the route is accessed without auth token', async () => {
+		it('should throw HTTP 401 when the route is accessed without auth token', async () => {
 			await callTestRoute(401);
 		});
 
-		it('should throw HTTP 403 if the route is accessed with an expired token', async () => {
+		it('should throw HTTP 403 when the route is accessed with an expired token', async () => {
 			vi.useFakeTimers({ shouldAdvanceTime: true });
 
 			vi.advanceTimersByTime(2 * 60 * 1000);
@@ -253,11 +359,11 @@ describe('User Routes Integration Tests', () => {
 			return data;
 		};
 
-		it('should throw HTTP 401 if the route is accessed without login', async () => {
+		it('should throw HTTP 401 when the route is accessed without login', async () => {
 			await callTestRoute(401, undefined, testName);
 		});
 
-		it('should throw HTTP 403 if the route is accessed with an expired token', async () => {
+		it('should throw HTTP 403 when the route is accessed with an expired token', async () => {
 			vi.useFakeTimers({ shouldAdvanceTime: true });
 
 			vi.advanceTimersByTime(2 * 60 * 1000);
@@ -295,12 +401,18 @@ describe('User Routes Integration Tests', () => {
 
 	describe('Register new user', () => {
 		const testUrl = '/api/user/register';
-		let tempUser: typeof testUser & { phone: string; birthday: string };
+		// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+		const tempUser = testUsers[0]!;
+		tempUser.phone = '123-456-7890';
 
-		const callTestRoute = async (status: number, message?: string) => {
+		const callTestRoute = async (
+			status: number,
+			data?: (typeof testUsers)[number],
+			message?: string
+		) => {
 			const response: ResponseWithError = await api
 				.post(testUrl)
-				.send(tempUser)
+				.send(data)
 				.expect(status);
 
 			if (message) {
@@ -308,109 +420,43 @@ describe('User Routes Integration Tests', () => {
 			}
 		};
 
-		beforeEach(() => {
-			tempUser = { ...testUser, phone: '123-456-7581', birthday: '2025-01-01' };
-		});
-
-		it('should return HTTP 400 and a message when first name is empty in request body', async () => {
-			tempUser.firstName = '';
-
-			await callTestRoute(400, 'firstName: First Name is required');
-		});
-
-		it('should return HTTP 400 and a message when first name is more than 260 characters', async () => {
-			tempUser.firstName = 'A'.repeat(261);
-
-			await callTestRoute(
-				400,
-				'firstName: First Name cannot be more than 260 characters'
-			);
-		});
-
-		it('should return HTTP 400 and a message when last name is empty in request body', async () => {
-			tempUser.lastName = '';
-
-			await callTestRoute(400, 'lastName: Last Name is required');
-		});
-
-		it('should return HTTP 400 and a message when last name is more than 260 characters', async () => {
-			tempUser.lastName = 'A'.repeat(261);
-
-			await callTestRoute(
-				400,
-				'lastName: Last Name cannot be more than 260 characters'
-			);
-		});
-
-		it('should return HTTP 400 and a message when email is empty in request body', async () => {
-			tempUser.email = '';
-
-			await callTestRoute(400, 'email: Email is required');
-		});
-
-		it('should return HTTP 400 and a message when email is not valid', async () => {
-			tempUser.email = 'sampleemail';
-
-			await callTestRoute(400, 'email: Email must be valid');
-		});
-
-		it('should return HTTP 400 and a message when password is less than 8 characters', async () => {
-			tempUser.password = 'pass';
-			await callTestRoute(
-				400,
-				'password: Password is required and must be minimum of 8 characters'
-			);
-		});
-
-		it('should return HTTP 400 and a message when password is more than 8 characters but too simple', async () => {
-			tempUser.password = 'Password1';
-
-			await callTestRoute(
-				400,
-				'password: Stronger password is required. The password must have one uppercase, one lowercase, one number and one special character and no spaces'
-			);
-		});
-
-		it('should return HTTP 400 and a message when phone number is provided in incorrect format', async () => {
-			tempUser.phone = '1234567891';
-
-			await callTestRoute(
-				400,
-				'phone: Phone number must be in format XXX-XXX-XXXX'
-			);
-		});
-
-		it('should return HTTP 400 and a message when birthday is provided in incorrect format', async () => {
-			tempUser.birthday = '20240101';
-
-			await callTestRoute(
-				400,
-				'birthday: Birthday must be valid date in YYYY-MM-DD format'
-			);
-		});
-
-		it('should return HTTP 400 and a message when provided birthday is an invalid date', async () => {
-			tempUser.birthday = '2024-02-32';
-
-			await callTestRoute(
-				400,
-				'birthday: Birthday must be valid date in YYYY-MM-DD format'
-			);
-		});
+		it.each(userHTTP400Errors)(
+			'should return HTTP 400 and a message when %s',
+			async (_testDescription, property, obj, errMessage) => {
+				await callTestRoute(
+					400,
+					{
+						...tempUser,
+						[property]: obj[property],
+					},
+					errMessage
+				);
+			}
+		);
 
 		it('should return HTTP 500 and a message when user creation failed due to same duplicate entry for the email field', async () => {
-			tempUser.email = testUsers[0]?.email ?? '';
-
-			await callTestRoute(500, 'Something went wrong. Try again later!');
+			await callTestRoute(
+				500,
+				tempUser,
+				'Something went wrong. Try again later!'
+			);
 		});
 
 		it('should return HTTP 201 on success', async () => {
-			await callTestRoute(201);
+			await callTestRoute(201, {
+				...tempUser,
+				firstName: 'Test',
+				lastName: 'User',
+				email: 'email@email.com',
+				password: 'Mypassword@123',
+			});
 		});
 	});
 
 	describe('Update user with id route', () => {
-		const tempUser = { ...testUsers[0] };
+		// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+		const tempUser = testUsers[0]!;
+		tempUser.phone = '123-456-7890';
 		const filePath = join(
 			__dirname,
 			'../../testAssets/blank-profile-picture.png'
@@ -426,13 +472,12 @@ describe('User Routes Integration Tests', () => {
 			'../../testAssets/blank-profile-picture-too-big.png'
 		);
 
-		it('should throw HTTP 401 if the route is accessed without login', async () => {
+		it('should throw HTTP 401 when the route is accessed without login', async () => {
 			await api.patch(`/api/user/${userId}`).field(tempUser).expect(401);
 		}, 6000);
 
-		it('should throw HTTP 403 if the route is accessed with an expired token', async () => {
+		it('should throw HTTP 403 when the route is accessed with an expired token', async () => {
 			vi.useFakeTimers({ shouldAdvanceTime: true });
-
 			vi.advanceTimersByTime(2 * 60 * 1000);
 
 			await api
@@ -465,6 +510,20 @@ describe('User Routes Integration Tests', () => {
 
 			expect(response.body.error).toEqual('User does not exist');
 		});
+
+		it.each(userHTTP400Errors)(
+			'should return HTTP 400 and a message when %s',
+			async (_testDescription, property, obj, errMessage) => {
+				const response: ResponseWithError = await api
+					.patch(`/api/user/${userId}`)
+					.auth(authToken, { type: 'bearer' })
+					.field({ ...tempUser, [property]: obj[property] })
+					.attach('coverImage', filePath)
+					.expect(400);
+
+				expect(response.body.error).toContain(errMessage);
+			}
+		);
 
 		it('should return HTTP 400 and a message when attached image is not an approved filetypes: png and jpeg', async () => {
 			const response: ResponseWithError = await api
@@ -528,11 +587,11 @@ describe('User Routes Integration Tests', () => {
 	});
 
 	describe('Delete user with id route', () => {
-		it('should throw HTTP 401 if the route is accessed without login', async () => {
+		it('should throw HTTP 401 when the route is accessed without login', async () => {
 			await api.delete(`/api/user/${userId}`).expect(401);
 		});
 
-		it('should throw HTTP 403 if the route is accessed with an expired token', async () => {
+		it('should throw HTTP 403 when the route is accessed with an expired token', async () => {
 			vi.useFakeTimers({ shouldAdvanceTime: true });
 
 			vi.advanceTimersByTime(2 * 60 * 1000);
@@ -553,6 +612,7 @@ describe('User Routes Integration Tests', () => {
 
 			expect(response.body.error).toEqual('Valid id is required');
 		});
+
 		it('should return HTTP 404 and a message when the user deletion failed for some reason', async () => {
 			const response: ResponseWithError = await api
 				.delete(`/api/user/${generate()}`)

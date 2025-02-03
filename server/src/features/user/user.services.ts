@@ -4,7 +4,7 @@ import { LoginUserType } from '@/features/auth/auth.zod.schemas.js';
 import { convertToSUUID, convertToUUID } from '@/utils/general.utils.js';
 import { eq, ilike, sql } from 'drizzle-orm';
 import { SUUID } from 'short-uuid';
-import { RegisterUserType, UpdateUserType } from './user.zod.schemas.js';
+import { UserType } from './user.zod.schemas.js';
 
 // Read User
 export const findUserById = async (data: { id: SUUID }) => {
@@ -96,7 +96,7 @@ export const findUsersByName = async (data: { name: string }) => {
 };
 
 // Create User
-export const createUser = async (data: RegisterUserType) => {
+export const createUser = async (data: UserType) => {
 	const newUser = await db.insert(user).values(data).returning({ id: user.id });
 
 	const newUserWithSUUID = newUser.map((user) => ({
@@ -108,7 +108,9 @@ export const createUser = async (data: RegisterUserType) => {
 };
 
 // Update User
-export const updateUserById = async (data: UpdateUserType) => {
+export const updateUserById = async (
+	data: UserType & { id: SUUID; updatedAt: Date }
+) => {
 	const { id: userId, ...goodData } = data;
 	const updatedUser = await db
 		.update(user)

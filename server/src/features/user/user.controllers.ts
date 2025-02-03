@@ -10,7 +10,7 @@ import {
 	updateUserById,
 	userExists,
 } from './user.services.js';
-import { RegisterUserType, UpdateUserType } from './user.zod.schemas.js';
+import { UserType } from './user.zod.schemas.js';
 
 export type CustomUserFiles = Partial<
 	Record<'profileImage' | 'coverImage', Express.Multer.File[]>
@@ -49,7 +49,7 @@ export const getUsersByName = async (
 
 // Create User
 export const registerUser = async (
-	req: Request<never, never, RegisterUserType>,
+	req: Request<never, never, UserType>,
 	res: Response
 ) => {
 	const { password, ...data } = req.body;
@@ -62,7 +62,7 @@ export const registerUser = async (
 
 // Update User
 export const updateUser = async (
-	req: Request<{ id: SUUID }, never, Omit<UpdateUserType, 'id'>> & {
+	req: Request<{ id: SUUID }, never, UserType> & {
 		files?: CustomUserFiles;
 	},
 	res: Response

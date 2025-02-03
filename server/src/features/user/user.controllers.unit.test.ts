@@ -27,7 +27,7 @@ import {
 	updateUserById,
 	userExists,
 } from './user.services.js';
-import { RegisterUserType, UpdateUserType } from './user.zod.schemas.js';
+import { UserType } from './user.zod.schemas.js';
 
 const testUser = createTestUser();
 testUser.password = samplePassword;
@@ -183,7 +183,7 @@ describe('User Controller Functions', () => {
 	describe('registerUser function', () => {
 		const callTestFn = async () => {
 			await registerUser(
-				req as unknown as Request<never, never, RegisterUserType>,
+				req as unknown as Request<never, never, UserType>,
 				res as unknown as Response
 			);
 		};
@@ -205,7 +205,7 @@ describe('User Controller Functions', () => {
 			);
 		};
 
-		it('should throw Error if user deletion fails due to incorrect id', async () => {
+		it('should throw Error when user deletion fails due to incorrect id', async () => {
 			(deleteUserById as Mock).mockResolvedValue(undefined);
 
 			await expect(callTestFn()).rejects.toThrowError(
@@ -227,7 +227,7 @@ describe('User Controller Functions', () => {
 	describe('updateUser function', () => {
 		const callTestFn = async () => {
 			await updateUser(
-				req as unknown as Request<{ id: SUUID }, never, UpdateUserType>,
+				req as unknown as Request<{ id: SUUID }, never, UserType>,
 				res as unknown as Response
 			);
 		};

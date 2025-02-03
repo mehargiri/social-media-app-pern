@@ -1,6 +1,5 @@
 import { user } from '@/db/schema/index.js';
-import { createInsertSchema, createUpdateSchema } from 'drizzle-zod';
-import { SUUID } from 'short-uuid';
+import { createInsertSchema } from 'drizzle-zod';
 
 const passwordRegex =
 	/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[^\s]{8,}$/;
@@ -42,6 +41,12 @@ export const insertUserSchema = createInsertSchema(user, {
 				(value) => !isNaN(new Date(value).getTime()),
 				'Birthday must be valid date in YYYY-MM-DD format'
 			),
+	bio: (schema) =>
+		schema.max(1000, 'Bio cannot be more than 1000 characters').trim(),
+	currentCity: (schema) =>
+		schema.max(260, 'Current city cannot be more than 260 characters'),
+	hometown: (schema) =>
+		schema.max(260, 'Hometown cannot be more than 260 characters'),
 }).omit({
 	id: true,
 	createdAt: true,
@@ -50,15 +55,4 @@ export const insertUserSchema = createInsertSchema(user, {
 	confirmedEmail: true,
 });
 
-// Schemas for different CRUD actions
-export const registerUserSchema = insertUserSchema;
-
-export const updateUserSchema = createUpdateSchema(user).omit({
-	id: true,
-	createdAt: true,
-});
-
-// Types for different CRUD actions
-export type RegisterUserType = typeof registerUserSchema._type;
-
-export type UpdateUserType = typeof updateUserSchema._type & { id: SUUID };
+export type UserType = typeof insertUserSchema._type;

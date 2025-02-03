@@ -16,7 +16,7 @@ import {
 	registerUser,
 	updateUser,
 } from './user.controllers.js';
-import { registerUserSchema, updateUserSchema } from './user.zod.schemas.js';
+import { insertUserSchema } from './user.zod.schemas.js';
 
 const router = Router();
 
@@ -29,14 +29,14 @@ const upload = multer({
 router.get('/', tokenHandler, getUsersByName);
 router.get('/me', tokenHandler, getMe);
 router.get('/:id', tokenHandler, getUser);
-router.post('/register', validateData(registerUserSchema), registerUser);
+router.post('/register', validateData(insertUserSchema), registerUser);
 router.patch(
 	'/:id',
 	tokenHandler,
 	upload.fields(
 		imageFieldNames.map((fieldName) => ({ name: fieldName, maxCount: 1 }))
 	),
-	validateData(updateUserSchema),
+	validateData(insertUserSchema),
 	updateUser
 );
 router.delete('/:id', tokenHandler, deleteUser);
