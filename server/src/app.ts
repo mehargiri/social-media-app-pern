@@ -1,4 +1,5 @@
 import authRoutes from '@/features/auth/auth.routes.js';
+import collegeRoutes from '@/features/college/college.routes.js';
 import highschoolRoutes from '@/features/highschool/highschool.routes.js';
 import userRoutes from '@/features/user/user.routes.js';
 import cookieParser from 'cookie-parser';
@@ -22,6 +23,7 @@ app.use(morgan('tiny'));
 app.use('/api/auth', authRoutes);
 app.use('/api/user', userRoutes);
 app.use('/api/highschool', highschoolRoutes);
+app.use('/api/college', collegeRoutes);
 
 app.use(errorHandler);
 
