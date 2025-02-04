@@ -5,6 +5,7 @@ import { convertToSUUID } from '@/utils/general.utils.js';
 import {
 	createTestUser,
 	createTestWork,
+	HTTPError400TestsType,
 	LoginResponseWithSuccess,
 	ResponseWithError,
 	samplePassword,
@@ -14,7 +15,7 @@ import {
 import { reset } from 'drizzle-seed';
 import { SUUID } from 'short-uuid';
 import supertest from 'supertest';
-import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import { WorkType } from './work.zod.schemas.js';
 
 // eslint-disable-next-line @typescript-eslint/no-misused-promises
@@ -22,14 +23,7 @@ const api = supertest(app);
 const testUser = createTestUser();
 const testWork = createTestWork();
 
-type Work400ErrorType<T extends keyof WorkType> = [
-	test_description: string,
-	property: T,
-	obj: Partial<Record<T, WorkType[T]>>,
-	errMessage: string
-];
-
-const work400Errors: Work400ErrorType<keyof WorkType>[] = [
+const work400Errors: HTTPError400TestsType<WorkType>[] = [
 	[
 		'company is more than 260 characters',
 		'company',
@@ -109,6 +103,18 @@ describe('Work Routes Integration Tests', () => {
 			await api.post(testUrl).expect(401);
 		});
 
+		it('should return HTTP 403 when the route is accessed with an expired token', async () => {
+			vi.useFakeTimers({ shouldAdvanceTime: true });
+			vi.advanceTimersByTime(2 * 60 * 1000);
+
+			await api
+				.post(testUrl)
+				.auth(authToken, { type: 'bearer' })
+				.send(testWork)
+				.expect(403);
+			vi.useRealTimers();
+		});
+
 		it.each(work400Errors)(
 			'should return HTTP 400 and a message when the work %s',
 			async (_testDescription, property, obj, errMessage) => {
@@ -160,6 +166,18 @@ describe('Work Routes Integration Tests', () => {
 
 		it('should return HTTP 401 when the route is accessed without auth token', async () => {
 			await api.patch(testUrl).expect(401);
+		});
+
+		it('should return HTTP 403 when the route is accessed with an expired token', async () => {
+			vi.useFakeTimers({ shouldAdvanceTime: true });
+			vi.advanceTimersByTime(2 * 60 * 1000);
+
+			await api
+				.patch(testUrl)
+				.auth(authToken, { type: 'bearer' })
+				.send(testWork)
+				.expect(403);
+			vi.useRealTimers();
 		});
 
 		it('should return HTTP 400 and a message when the work id is not valid', async () => {
@@ -235,6 +253,18 @@ describe('Work Routes Integration Tests', () => {
 
 		it('should return HTTP 401 when the route is accessed without auth token', async () => {
 			await api.delete(testUrl).expect(401);
+		});
+
+		it('should return HTTP 403 when the route is accessed with an expired token', async () => {
+			vi.useFakeTimers({ shouldAdvanceTime: true });
+			vi.advanceTimersByTime(2 * 60 * 1000);
+
+			await api
+				.delete(testUrl)
+				.auth(authToken, { type: 'bearer' })
+				.send(testWork)
+				.expect(403);
+			vi.useRealTimers();
 		});
 
 		it('should return HTTP 400 and a message when the work id is invalid', async () => {
