@@ -15,6 +15,13 @@ export type LoginResponseWithSuccess = SuperTestResponse<{
 	accessToken: string;
 }>;
 
+export type HTTPError400TestsType<T> = [
+	test_description: string,
+	property: keyof T,
+	obj: Partial<Record<keyof T, T[keyof T]>>,
+	errMessage: string
+];
+
 export const randomUserId = async (testEmails: string[], email?: string) => {
 	const userEmails = email
 		? testEmails.filter((testEmail) => testEmail !== email)

@@ -5,6 +5,7 @@ import { convertToSUUID } from '@/utils/general.utils.js';
 import {
 	createTestCollege,
 	createTestUser,
+	HTTPError400TestsType,
 	LoginResponseWithSuccess,
 	ResponseWithError,
 	samplePassword,
@@ -14,7 +15,7 @@ import {
 import { reset } from 'drizzle-seed';
 import { SUUID } from 'short-uuid';
 import supertest from 'supertest';
-import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import { CollegeType } from './college.zod.schemas.js';
 
 // eslint-disable-next-line @typescript-eslint/no-misused-promises
@@ -22,14 +23,7 @@ const api = supertest(app);
 const testUser = createTestUser();
 const testCollege = createTestCollege();
 
-export type College400ErrorType<T extends keyof CollegeType> = [
-	test_description: string,
-	property: T,
-	obj: Partial<Record<T, CollegeType[T]>>,
-	errMessage: string
-];
-
-const college400Errors: College400ErrorType<keyof CollegeType>[] = [
+const college400Errors: HTTPError400TestsType<CollegeType>[] = [
 	[
 		'name is more than 260 characters',
 		'name',
@@ -126,6 +120,14 @@ describe('College Routes Integration Tests', () => {
 			await api.post(testUrl).expect(401);
 		});
 
+		it('should return HTTP 403 when the route is accessed with an expired auth token', async () => {
+			vi.useFakeTimers({ shouldAdvanceTime: true });
+			vi.advanceTimersByTime(2 * 60 * 1000);
+
+			await api.post(testUrl).auth(authToken, { type: 'bearer' }).expect(403);
+			vi.useRealTimers();
+		});
+
 		it.each(college400Errors)(
 			'should return HTTP 400 and a message when the college %s',
 			async (_testDescription, property, obj, errMessage) => {
@@ -176,6 +178,14 @@ describe('College Routes Integration Tests', () => {
 
 		it('should return HTTP 401 when the route is accessed without auth token', async () => {
 			await api.patch(testUrl).expect(401);
+		});
+
+		it('should return HTTP 403 when the route is accessed with an expired auth token', async () => {
+			vi.useFakeTimers({ shouldAdvanceTime: true });
+			vi.advanceTimersByTime(2 * 60 * 1000);
+
+			await api.patch(testUrl).auth(authToken, { type: 'bearer' }).expect(403);
+			vi.useRealTimers();
 		});
 
 		it('should return HTTP 400 and a message when the college id is not valid', async () => {
@@ -250,6 +260,14 @@ describe('College Routes Integration Tests', () => {
 
 		it('should return HTTP 401 when the route is accessed without auth token', async () => {
 			await api.delete(testUrl).expect(401);
+		});
+
+		it('should return HTTP 403 when the route is accessed with an expired auth token', async () => {
+			vi.useFakeTimers({ shouldAdvanceTime: true });
+			vi.advanceTimersByTime(2 * 60 * 1000);
+
+			await api.delete(testUrl).auth(authToken, { type: 'bearer' }).expect(403);
+			vi.useRealTimers();
 		});
 
 		it('should return HTTP 400 and a message when the college id is not valid', async () => {
