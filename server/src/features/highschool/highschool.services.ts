@@ -3,13 +3,10 @@ import { highschool } from '@/db/schema/index.js';
 import { convertToSUUID, convertToUUID } from '@/utils/general.utils.js';
 import { and, eq } from 'drizzle-orm';
 import { SUUID } from 'short-uuid';
-import {
-	CreateHighschoolType,
-	UpdateHighschoolType,
-} from './highschool.zod.schemas.js';
+import { HighschoolType } from './highschool.zod.schemas.js';
 
 export const makeHighschool = async (
-	data: CreateHighschoolType & { userId: SUUID }
+	data: HighschoolType & { userId: SUUID }
 ) => {
 	const { userId, ...goodData } = data;
 	const newHighschool = await db
@@ -26,7 +23,7 @@ export const makeHighschool = async (
 };
 
 export const updateHighschoolById = async (
-	data: UpdateHighschoolType & { id: SUUID; userId: SUUID }
+	data: HighschoolType & { id: SUUID; userId: SUUID; updatedAt: Date }
 ) => {
 	const { id, userId, ...goodData } = data;
 	const updatedHighschool = await db

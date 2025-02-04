@@ -7,13 +7,10 @@ import {
 	makeHighschool,
 	updateHighschoolById,
 } from './highschool.services.js';
-import {
-	CreateHighschoolType,
-	UpdateHighschoolType,
-} from './highschool.zod.schemas.js';
+import { HighschoolType } from './highschool.zod.schemas.js';
 
 export const createHighschool = async (
-	req: Request<never, never, CreateHighschoolType>,
+	req: Request<never, never, HighschoolType>,
 	res: Response
 ) => {
 	await makeHighschool({
@@ -24,7 +21,7 @@ export const createHighschool = async (
 };
 
 export const updateHighschool = async (
-	req: Request<{ id: SUUID }, never, UpdateHighschoolType>,
+	req: Request<{ id: SUUID }, never, HighschoolType>,
 	res: Response
 ) => {
 	const { id } = req.params;

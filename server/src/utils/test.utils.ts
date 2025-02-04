@@ -1,6 +1,7 @@
 import { db } from '@/db/index.js';
 import { collegeTypeEnum } from '@/db/schema/college.js';
 import { user, userGenderEnum } from '@/db/schema/user.js';
+import { HighschoolType } from '@/features/highschool/highschool.zod.schemas.js';
 import { faker } from '@faker-js/faker';
 import { hash } from 'argon2';
 import { eq } from 'drizzle-orm';
@@ -90,7 +91,9 @@ export const createTestWork = () => ({
 	workingNow: faker.datatype.boolean(),
 });
 
-export const createTestHighSchool = () => ({
+export const createTestHighSchool = (): HighschoolType & {
+	userId: string;
+} => ({
 	userId: '',
 	name: faker.company.name(),
 	startYear: faker.date.past().getFullYear(),

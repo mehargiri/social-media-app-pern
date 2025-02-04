@@ -21,8 +21,4 @@ export const createHighschoolSchema = createInsertSchema(highschool, {
 	updatedAt: true,
 });
 
-export type CreateHighschoolType = typeof createHighschoolSchema._type;
-
-export type UpdateHighschoolType = typeof createHighschoolSchema._type & {
-	updatedAt: Date;
-};
+export type HighschoolType = typeof createHighschoolSchema._type;
