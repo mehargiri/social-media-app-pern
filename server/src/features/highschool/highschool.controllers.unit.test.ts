@@ -79,20 +79,11 @@ describe('Highschool Controller Functions', () => {
 		});
 
 		it('should call res.json with the same id present in request params on success', async () => {
-			vi.doMock('@/utils/general.utils.ts', () => ({
-				validateSUUID: vi.fn(),
-			}));
-
-			const { validateSUUID } = await import('@/utils/general.utils.js');
-
-			(validateSUUID as Mock).mockReturnValue(true);
 			(highschoolExists as Mock).mockResolvedValue(true);
 			(updateHighschoolById as Mock).mockResolvedValue({ id: sampleSUUID });
 
 			await callTestFn(sampleSUUID);
 			expect(res.json).toHaveBeenCalledWith({ id: sampleSUUID });
-
-			vi.doUnmock('@/utils/general.utils.ts');
 		});
 	});
 
@@ -122,13 +113,6 @@ describe('Highschool Controller Functions', () => {
 		});
 
 		it('should call res.json with a message on success', async () => {
-			vi.doMock('@/utils/general.utils.ts', () => ({
-				validateSUUID: vi.fn(),
-			}));
-
-			const { validateSUUID } = await import('@/utils/general.utils.js');
-
-			(validateSUUID as Mock).mockReturnValue(true);
 			(highschoolExists as Mock).mockResolvedValue(true);
 			(deleteHighschoolById as Mock).mockResolvedValue({
 				id: sampleSUUID,
@@ -138,8 +122,6 @@ describe('Highschool Controller Functions', () => {
 			expect(res.json).toHaveBeenCalledWith({
 				message: 'Highschool deleted successfully',
 			});
-
-			vi.doUnmock('@/utils/general.utils.ts');
 		});
 	});
 });
