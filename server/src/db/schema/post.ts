@@ -8,8 +8,8 @@ export const post = pgTable('post', {
 	userId: uuid()
 		.notNull()
 		.references(() => user.id, { onDelete: 'cascade' }),
-	content: text(),
-	asset: text().array(),
+	content: text().notNull(),
+	assets: text().array(),
 	...timestamps,
 });
 

@@ -1,6 +1,7 @@
 import authRoutes from '@/features/auth/auth.routes.js';
 import collegeRoutes from '@/features/college/college.routes.js';
 import highschoolRoutes from '@/features/highschool/highschool.routes.js';
+import postRoutes from '@/features/post/post.routes.js';
 import userRoutes from '@/features/user/user.routes.js';
 import workRoutes from '@/features/work/work.routes.js';
 import cookieParser from 'cookie-parser';
@@ -26,6 +27,7 @@ app.use('/api/user', userRoutes);
 app.use('/api/highschool', highschoolRoutes);
 app.use('/api/college', collegeRoutes);
 app.use('/api/work', workRoutes);
+app.use('/api/posts', postRoutes);
 
 app.use(errorHandler);
 
