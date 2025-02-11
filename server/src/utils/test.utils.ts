@@ -1,8 +1,11 @@
 import { db } from '@/db/index.js';
 import { collegeTypeEnum } from '@/db/schema/college.js';
 import { user, userGenderEnum } from '@/db/schema/user.js';
+import { CollegeType } from '@/features/college/college.zod.schemas.js';
 import { HighschoolType } from '@/features/highschool/highschool.zod.schemas.js';
 import { PostType } from '@/features/post/post.zod.schemas.js';
+import { UserType } from '@/features/user/user.zod.schemas.js';
+import { WorkType } from '@/features/work/work.zod.schemas.js';
 import { faker } from '@faker-js/faker';
 import { hash } from 'argon2';
 import { eq } from 'drizzle-orm';
@@ -59,7 +62,7 @@ export const testUser = {
 	password: await hash(samplePassword),
 };
 
-export const createTestUser = () => ({
+export const createTestUser = (): UserType => ({
 	firstName: testUser.firstName,
 	lastName: faker.person.lastName(),
 	phone: faker.phone.number(),
@@ -71,9 +74,11 @@ export const createTestUser = () => ({
 	bio: faker.person.bio(),
 	currentCity: faker.location.city(),
 	hometown: faker.location.city(),
+	profilePic: faker.image.urlPicsumPhotos(),
+	coverPic: faker.image.urlPicsumPhotos(),
 });
 
-export const createTestCollege = () => ({
+export const createTestCollege = (): CollegeType & { userId: string } => ({
 	userId: '',
 	type: faker.helpers.arrayElement(collegeTypeEnum.enumValues),
 	name: faker.company.name(),
@@ -86,7 +91,7 @@ export const createTestCollege = () => ({
 	major3: faker.lorem.words(3),
 });
 
-export const createTestWork = () => ({
+export const createTestWork = (): WorkType & { userId: string } => ({
 	userId: '',
 	company: faker.company.name(),
 	startYear: faker.date.past().getFullYear(),
