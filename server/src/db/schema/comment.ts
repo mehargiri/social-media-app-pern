@@ -24,7 +24,7 @@ export const comment = pgTable(
 			onDelete: 'cascade',
 		}),
 		content: text().notNull(),
-		commentLevel: integer().default(0),
+		commentLevel: integer().default(0).notNull(),
 		...timestamps,
 	},
 	(table) => [
