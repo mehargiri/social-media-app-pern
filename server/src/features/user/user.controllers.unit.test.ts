@@ -56,8 +56,8 @@ const mockUser = {
 const mockUsers = Array.from({ length: 2 }, () => ({ ...mockUser }));
 
 const testFiles: CustomUserFiles = {
-	profileImage: [createTestFile('profileImage')],
-	coverImage: [createTestFile('coverImage')],
+	profilePic: [createTestFile('profilePic')],
+	coverPic: [createTestFile('coverPic')],
 };
 
 describe('User Controller Functions', () => {
@@ -102,7 +102,7 @@ describe('User Controller Functions', () => {
 		const callTestFn = async () => {
 			await getUser(
 				req as unknown as Request<{ id: SUUID }>,
-				res as unknown as Response
+				res as unknown as Response<Awaited<ReturnType<typeof findUserById>>>
 			);
 		};
 
@@ -125,7 +125,10 @@ describe('User Controller Functions', () => {
 
 	describe('getMe function', () => {
 		const callTestFn = async () => {
-			await getMe(req as unknown as Request, res as unknown as Response);
+			await getMe(
+				req as unknown as Request,
+				res as unknown as Response<Awaited<ReturnType<typeof findUserById>>>
+			);
 		};
 
 		it('should throw Error when user is not found', async () => {
@@ -149,7 +152,7 @@ describe('User Controller Functions', () => {
 		const callTestFn = async () => {
 			await getUsersByName(
 				req as unknown as Request<never, never, never, { name: string }>,
-				res as unknown as Response
+				res as unknown as Response<Awaited<ReturnType<typeof findUsersByName>>>
 			);
 		};
 

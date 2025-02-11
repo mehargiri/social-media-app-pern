@@ -109,7 +109,11 @@ export const createUser = async (data: UserType) => {
 
 // Update User
 export const updateUserById = async (
-	data: UserType & { id: SUUID; updatedAt: Date }
+	data: Partial<UserType> & {
+		id: SUUID;
+		updatedAt?: Date;
+		refreshToken?: string[];
+	}
 ) => {
 	const { id: userId, ...goodData } = data;
 	const updatedUser = await db

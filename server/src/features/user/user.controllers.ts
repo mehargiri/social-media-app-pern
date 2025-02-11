@@ -13,11 +13,14 @@ import {
 import { UserType } from './user.zod.schemas.js';
 
 export type CustomUserFiles = Partial<
-	Record<'profileImage' | 'coverImage', Express.Multer.File[]>
+	Record<'profilePic' | 'coverPic', Express.Multer.File[]>
 >;
 
 // Read User
-export const getMe = async (req: Request, res: Response) => {
+export const getMe = async (
+	req: Request,
+	res: Response<Awaited<ReturnType<typeof findUserById>>>
+) => {
 	const { userId: id } = req;
 	validateSUUID(id);
 	const me = await findUserById({ id: id as SUUID });
@@ -25,7 +28,10 @@ export const getMe = async (req: Request, res: Response) => {
 	return void res.json(me);
 };
 
-export const getUser = async (req: Request<{ id: SUUID }>, res: Response) => {
+export const getUser = async (
+	req: Request<{ id: SUUID }>,
+	res: Response<Awaited<ReturnType<typeof findUserById>>>
+) => {
 	const { id } = req.params;
 	validateSUUID(id);
 	const user = await findUserById({ id });
@@ -35,7 +41,7 @@ export const getUser = async (req: Request<{ id: SUUID }>, res: Response) => {
 
 export const getUsersByName = async (
 	req: Request<never, never, never, { name: string }>,
-	res: Response
+	res: Response<Awaited<ReturnType<typeof findUsersByName>>>
 ) => {
 	const { name } = req.query;
 	if (!name) throw Error('Name is required', { cause: 400 });
@@ -62,18 +68,17 @@ export const registerUser = async (
 
 // Update User
 export const updateUser = async (
-	req: Request<{ id: SUUID }, never, UserType> & {
-		files?: CustomUserFiles;
-	},
+	req: Request<{ id: SUUID }, never, UserType>,
 	res: Response
 ) => {
 	const { id } = req.params;
 	validateSUUID(id);
 
 	// Later, multer will be replaced with CloudImage or Cloudinary
+	const attachedFiles = req.files as CustomUserFiles;
 
-	const profileImage = req.files?.profileImage;
-	const coverImage = req.files?.coverImage;
+	const profilePicPath = attachedFiles.profilePic?.at(0)?.path;
+	const coverPicPath = attachedFiles.coverPic?.at(0)?.path;
 
 	const isUser = await userExists({ id });
 	if (!isUser) throw Error('User does not exist', { cause: 404 });
@@ -81,8 +86,8 @@ export const updateUser = async (
 	const updatedUser = await updateUserById({
 		...req.body,
 		id,
-		profilePic: profileImage ? profileImage[0]?.path : '',
-		coverPic: coverImage ? coverImage[0]?.path : '',
+		profilePic: profilePicPath,
+		coverPic: coverPicPath,
 		updatedAt: new Date(),
 	});
 

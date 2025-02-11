@@ -113,7 +113,7 @@ export const createTestHighSchool = (): HighschoolType & {
 	graduated: faker.datatype.boolean(),
 });
 
-export const createTestFile = (fieldName: 'coverImage' | 'profileImage') => ({
+export const createTestFile = (fieldName: 'coverPic' | 'profilePic') => ({
 	originalname: fieldName.split('I')[0] ?? '',
 	fieldname: fieldName,
 	mimetype: 'image/png',

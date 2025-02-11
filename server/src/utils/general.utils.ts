@@ -23,7 +23,7 @@ export const convertToSUUID = (id: string) => {
 // Multer
 export const maxFileSize = 1 * 1024 * 1024; // 1 MB
 export const allowedFileTypes = ['image/png', 'image/jpg']; // only png and jpg allowed
-export const imageFieldNames = ['profileImage', 'coverImage'];
+export const imageFieldNames = ['profilePic', 'coverPic'];
 
 export type DestinationCallback = (
 	error: Error | null,

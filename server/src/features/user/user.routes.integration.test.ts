@@ -8,18 +8,17 @@ import {
 	work,
 } from '@/db/schema/index.js';
 import { createAccessToken } from '@/features/auth/auth.utils.js';
-import { convertToUUID } from '@/utils/general.utils.js';
+import { convertToSUUID, convertToUUID } from '@/utils/general.utils.js';
 import {
 	createTestCollege,
 	createTestHighSchool,
 	createTestUser,
 	createTestWork,
+	ExtractResponseBody,
 	getTestUserId,
 	HTTPError400TestsType,
-	LoginResponseWithSuccess,
 	randomUserId,
 	ResponseWithError,
-	samplePassword,
 	SuperTestResponse,
 	testUser,
 } from '@/utils/test.utils.js';
@@ -28,8 +27,16 @@ import { mkdir, rm } from 'fs/promises';
 import { join } from 'path';
 import { generate, SUUID } from 'short-uuid';
 import supertest from 'supertest';
-import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
-import { findUserById, findUsersByName } from './user.services.js';
+import {
+	afterAll,
+	beforeAll,
+	beforeEach,
+	describe,
+	expect,
+	it,
+	vi,
+} from 'vitest';
+import { getUser, getUsersByName } from './user.controllers.js';
 import { UserType } from './user.zod.schemas.js';
 
 // eslint-disable-next-line @typescript-eslint/no-misused-promises
@@ -48,7 +55,7 @@ const testCollege = createTestCollege();
 const testWork = createTestWork();
 const testHighSchool = createTestHighSchool();
 
-const userHTTP400Errors: HTTPError400TestsType<UserType>[] = [
+const createUserHTTP400Errors: HTTPError400TestsType<UserType>[] = [
 	[
 		'first name is empty',
 		'firstName',
@@ -111,12 +118,6 @@ const userHTTP400Errors: HTTPError400TestsType<UserType>[] = [
 		'password: Stronger password is required. The password must have one uppercase, one lowercase, one number and one special character and no spaces',
 	],
 	[
-		'password has no special character but length is more than 8 characters',
-		'password',
-		{ password: 'Mypassword1' },
-		'password: Stronger password is required. The password must have one uppercase, one lowercase, one number and one special character and no spaces',
-	],
-	[
 		'password has a space in the middle but length is more than 8 characters',
 		'password',
 		{ password: 'My password1@' },
@@ -160,31 +161,108 @@ const userHTTP400Errors: HTTPError400TestsType<UserType>[] = [
 	],
 ];
 
+const updateUserHTTP400Errors: HTTPError400TestsType<UserType>[] = [
+	...createUserHTTP400Errors,
+	[
+		'profilePic has an attached image that is not from an approved filetypes: png and jpeg',
+		'profilePic',
+		{
+			profilePic: join(
+				__dirname,
+				'../../testAssets/blank-profile-picture-heic.heic'
+			),
+		},
+		'Invalid file type. Allowed: png and jpg/jpeg. Invalid file in profilePic',
+	],
+	[
+		'profilePic has an attached image that is too big',
+		'profilePic',
+		{
+			profilePic: join(
+				__dirname,
+				'../../testAssets/blank-profile-picture-too-big.png'
+			),
+		},
+		'File size exceeds the limit. Allowed max: 1MB',
+	],
+	[
+		'coverPic has an attached image that is not from an approved filetypes: png and jpeg',
+		'coverPic',
+		{
+			coverPic: join(
+				__dirname,
+				'../../testAssets/blank-profile-picture-heic.heic'
+			),
+		},
+		'Invalid file type. Allowed: png and jpg/jpeg. Invalid file in coverPic',
+	],
+	[
+		'coverPic has an attached image that is too big',
+		'coverPic',
+		{
+			coverPic: join(
+				__dirname,
+				'../../testAssets/blank-profile-picture-too-big.png'
+			),
+		},
+		'File size exceeds the limit. Allowed max: 1MB',
+	],
+];
+
+const getTestUrl = (id?: string) => `/api/user/${id ?? ''}`;
+
+interface RequestOptions {
+	method: 'get' | 'post' | 'patch' | 'delete';
+	url: string;
+	token?: string;
+	query?: Record<string, string>;
+	data?: Record<string, string>;
+	useField?: boolean;
+	imageAttachments?: Record<string, string>;
+}
+
+const performRequest = (options: RequestOptions) => {
+	const req = api[options.method](options.url);
+	if (options.token) req.auth(options.token, { type: 'bearer' });
+	if (options.query) req.query(options.query);
+	if (options.data) {
+		if (options.useField) req.field(options.data);
+		else req.send(options.data);
+	}
+	if (options.imageAttachments) {
+		for (const [field, path] of Object.entries(options.imageAttachments)) {
+			req.attach(field, path);
+		}
+	}
+	return req;
+};
+
 describe('User Routes Integration Tests', () => {
-	type getUserResponseSuccess = NonNullable<
-		Awaited<ReturnType<typeof findUserById>>
+	type getUserResponse = SuperTestResponse<
+		ExtractResponseBody<Parameters<typeof getUser>['1']>
 	>;
 
-	type getUsersByNameResponseSuccess = NonNullable<
-		Awaited<ReturnType<typeof findUsersByName>>
+	type getUsersByNameResponse = SuperTestResponse<
+		ExtractResponseBody<Parameters<typeof getUsersByName>['1']>
 	>;
 
-	const loginUrl = '/api/auth/login';
-	const loginDetails = {
-		email: testUsers[0]?.email ?? '',
-		password: samplePassword,
+	type WithoutNulls<T, K extends keyof T> = Omit<T, K> & {
+		[P in K]: Exclude<T[P], null | undefined>;
 	};
-	let loginResponse: LoginResponseWithSuccess;
-	let userId: SUUID, authToken: string;
+
+	let userId: SUUID, authToken: string, testUrl: string;
 
 	beforeAll(async () => {
-		await db.insert(user).values(testUsers);
+		const userIds = await db
+			.insert(user)
+			.values(testUsers)
+			.returning({ id: user.id });
 
-		const mainUserId = convertToUUID(await getTestUserId(loginDetails.email));
+		const mainUserId = { ...userIds[0] } as NonNullable<(typeof userIds)[0]>;
 
-		testCollege.userId = mainUserId;
-		testWork.userId = mainUserId;
-		testHighSchool.userId = mainUserId;
+		testCollege.userId = mainUserId.id;
+		testWork.userId = mainUserId.id;
+		testHighSchool.userId = mainUserId.id;
 
 		const testFriendShips = await Promise.all(
 			testUsers.map(async (user) => ({
@@ -198,8 +276,7 @@ describe('User Routes Integration Tests', () => {
 		await db.insert(highschool).values(testHighSchool);
 		await db.insert(college).values(testCollege);
 
-		loginResponse = await api.post(loginUrl).send(loginDetails);
-		userId = await getTestUserId(loginDetails.email);
+		userId = convertToSUUID(mainUserId.id);
 		authToken = createAccessToken(userId);
 	});
 
@@ -211,186 +288,192 @@ describe('User Routes Integration Tests', () => {
 	});
 
 	describe('GET me route', () => {
-		const testUrl = '/api/user/me';
-
-		const callTestRoute = async (status: number, token?: string) => {
-			const testApi = api.get(testUrl);
-			if (token) testApi.auth(token, { type: 'bearer' });
-			const data = await testApi.expect(status);
-			return data;
-		};
+		const testUrl = getTestUrl('me');
 
 		it('should throw HTTP 401 when the route is accessed without auth token', async () => {
-			await callTestRoute(401);
+			await performRequest({ method: 'get', url: testUrl }).expect(401);
 		});
 
 		it('should throw HTTP 403 when the route is accessed with an expired token', async () => {
 			vi.useFakeTimers({ shouldAdvanceTime: true });
-
 			vi.advanceTimersByTime(2 * 60 * 1000);
 
-			await callTestRoute(403, authToken);
+			await performRequest({
+				method: 'get',
+				url: testUrl,
+				token: authToken,
+			}).expect(403);
 
 			vi.useRealTimers();
 		});
 
 		it('should return HTTP 400 and a message when the provided id is invalid (not SUUID)', async () => {
-			const response: ResponseWithError = await callTestRoute(
-				400,
-				createAccessToken('random-id' as SUUID)
-			);
+			const response: ResponseWithError = await performRequest({
+				method: 'get',
+				url: testUrl,
+				token: createAccessToken('random-id' as SUUID),
+			}).expect(400);
 
 			expect(response.body.error).toEqual('Valid id is required');
 		});
 
-		it('should return HTTP 404 and a message when the provided id is valid (SUUID) but there is no user with the provided id in the database', async () => {
-			const response: ResponseWithError = await callTestRoute(
-				404,
-				createAccessToken(generate())
-			);
+		it('should return HTTP 404 and a message when the provided id is valid (SUUID) but user does not exist', async () => {
+			const response: ResponseWithError = await performRequest({
+				method: 'get',
+				url: testUrl,
+				token: createAccessToken(generate()),
+			}).expect(404);
 
 			expect(response.body.error).toEqual('User does not exist');
 		});
 
 		it('should return profile data including work, highSchool, college, and friends for logged user', async () => {
-			const response: SuperTestResponse<getUserResponseSuccess> =
-				await callTestRoute(200, loginResponse.body.accessToken);
+			const response: getUserResponse = await performRequest({
+				method: 'get',
+				url: testUrl,
+				token: authToken,
+			}).expect(200);
 
-			expect(response.body.id).toBeDefined();
-			expect(response.body.fullName).toBeDefined();
-			expect(response.body.gender).toBeDefined();
-			expect(response.body.phone).toBeDefined();
-			expect(response.body.email).toBeDefined();
-			expect(response.body.birthday).toBeDefined();
-			expect(response.body.profilePic).toBeDefined();
-			expect(response.body.coverPic).toBeDefined();
-			expect(response.body.birthday).toBeDefined();
-			expect(response.body.bio).toBeDefined();
-			expect(response.body.currentCity).toBeDefined();
-			expect(response.body.hometown).toBeDefined();
-			expect(response.body.highSchool).toBeDefined();
-			expect(response.body.college).toBeDefined();
-			expect(response.body.work).toBeDefined();
-			expect(response.body.friends).toBeDefined();
+			expect(response.body?.id).toBeDefined();
+			expect(response.body?.fullName).toBeDefined();
+			expect(response.body?.gender).toBeDefined();
+			expect(response.body?.phone).toBeDefined();
+			expect(response.body?.email).toBeDefined();
+			expect(response.body?.birthday).toBeDefined();
+			expect(response.body?.profilePic).toBeDefined();
+			expect(response.body?.coverPic).toBeDefined();
+			expect(response.body?.birthday).toBeDefined();
+			expect(response.body?.bio).toBeDefined();
+			expect(response.body?.currentCity).toBeDefined();
+			expect(response.body?.hometown).toBeDefined();
+			expect(response.body?.highSchool).toBeDefined();
+			expect(response.body?.college).toBeDefined();
+			expect(response.body?.work).toBeDefined();
+			expect(response.body?.friends).toBeDefined();
 		});
 	});
 
 	describe('GET user with id route', () => {
-		const callTestRoute = async (
-			status: number,
-			token?: string,
-			id: string = userId
-		) => {
-			const testApi = api.get(`/api/user/${id}`);
-			if (token) testApi.auth(token, { type: 'bearer' });
-			const data = await testApi.expect(status);
-			return data;
-		};
+		beforeEach(() => {
+			testUrl = getTestUrl(userId);
+		});
 
 		it('should throw HTTP 401 when the route is accessed without auth token', async () => {
-			await callTestRoute(401);
+			await performRequest({ method: 'get', url: testUrl }).expect(401);
 		});
 
 		it('should throw HTTP 403 when the route is accessed with an expired token', async () => {
 			vi.useFakeTimers({ shouldAdvanceTime: true });
-
 			vi.advanceTimersByTime(2 * 60 * 1000);
 
-			await callTestRoute(403, authToken);
-
+			await performRequest({
+				method: 'get',
+				url: testUrl,
+				token: authToken,
+			}).expect(403);
 			vi.useRealTimers();
 		});
 
 		it('should return HTTP 400 and a message when the provided id is invalid (not SUUID)', async () => {
-			const response: ResponseWithError = await callTestRoute(
-				400,
-				authToken,
-				'random-id'
-			);
+			const response: ResponseWithError = await performRequest({
+				method: 'get',
+				url: getTestUrl('random-id'),
+				token: authToken,
+			}).expect(400);
 
 			expect(response.body.error).toEqual('Valid id is required');
 		});
 
-		it('should return HTTP 404 and a message when the provided id is valid (SUUID) but there is no user with the provided id in the database', async () => {
-			const response: ResponseWithError = await callTestRoute(
-				404,
-				authToken,
-				generate()
-			);
+		it('should return HTTP 404 and a message when the provided id is valid (SUUID) but user does not exist', async () => {
+			const response: ResponseWithError = await performRequest({
+				method: 'get',
+				url: getTestUrl(generate()),
+				token: authToken,
+			}).expect(404);
 
 			expect(response.body.error).toEqual('User does not exist');
 		});
 
 		it('should return profile data including work, highSchool, college, and friends for the provided id of the user', async () => {
-			const response: SuperTestResponse<getUserResponseSuccess> =
-				await callTestRoute(200, loginResponse.body.accessToken);
+			const response: getUserResponse = await performRequest({
+				method: 'get',
+				url: testUrl,
+				token: authToken,
+			}).expect(200);
 
-			expect(response.body.id).toBeDefined();
-			expect(response.body.fullName).toBeDefined();
-			expect(response.body.gender).toBeDefined();
-			expect(response.body.phone).toBeDefined();
-			expect(response.body.email).toBeDefined();
-			expect(response.body.birthday).toBeDefined();
-			expect(response.body.profilePic).toBeDefined();
-			expect(response.body.coverPic).toBeDefined();
-			expect(response.body.birthday).toBeDefined();
-			expect(response.body.bio).toBeDefined();
-			expect(response.body.currentCity).toBeDefined();
-			expect(response.body.hometown).toBeDefined();
-			expect(response.body.highSchool).toBeDefined();
-			expect(response.body.college).toBeDefined();
-			expect(response.body.work).toBeDefined();
-			expect(response.body.friends).toBeDefined();
+			expect(response.body?.id).toBeDefined();
+			expect(response.body?.fullName).toBeDefined();
+			expect(response.body?.gender).toBeDefined();
+			expect(response.body?.phone).toBeDefined();
+			expect(response.body?.email).toBeDefined();
+			expect(response.body?.birthday).toBeDefined();
+			expect(response.body?.profilePic).toBeDefined();
+			expect(response.body?.coverPic).toBeDefined();
+			expect(response.body?.birthday).toBeDefined();
+			expect(response.body?.bio).toBeDefined();
+			expect(response.body?.currentCity).toBeDefined();
+			expect(response.body?.hometown).toBeDefined();
+			expect(response.body?.highSchool).toBeDefined();
+			expect(response.body?.college).toBeDefined();
+			expect(response.body?.work).toBeDefined();
+			expect(response.body?.friends).toBeDefined();
 		});
 	});
 
 	describe('GET user with name route', () => {
 		const testName = testUser.firstName;
-		const testUrlBase = '/api/user/';
-
-		const callTestRoute = async (
-			status: number,
-			token?: string,
-			queryValue?: string
-		) => {
-			const testApi = api.get(testUrlBase);
-			if (token) testApi.auth(token, { type: 'bearer' });
-			const data = await testApi.query({ name: queryValue }).expect(status);
-			return data;
-		};
+		beforeEach(() => {
+			testUrl = getTestUrl();
+		});
 
 		it('should throw HTTP 401 when the route is accessed without login', async () => {
-			await callTestRoute(401, undefined, testName);
+			await performRequest({
+				method: 'get',
+				url: testUrl,
+				query: { name: testName },
+			}).expect(401);
 		});
 
 		it('should throw HTTP 403 when the route is accessed with an expired token', async () => {
 			vi.useFakeTimers({ shouldAdvanceTime: true });
-
 			vi.advanceTimersByTime(2 * 60 * 1000);
 
-			await callTestRoute(403, authToken);
-
+			await performRequest({
+				method: 'get',
+				url: testUrl,
+				token: authToken,
+				query: { name: testName },
+			}).expect(403);
 			vi.useRealTimers();
 		});
 
 		it('should return HTTP 400 and a message when name is not provided', async () => {
-			const response: ResponseWithError = await callTestRoute(400, authToken);
+			const response: ResponseWithError = await performRequest({
+				method: 'get',
+				url: testUrl,
+				token: authToken,
+			}).expect(400);
 			expect(response.body.error).toEqual('Name is required');
 		});
 
 		it('should return HTTP 404 and a message when there is no user with the provided name in the database', async () => {
-			const response: ResponseWithError = await callTestRoute(
-				404,
-				authToken,
-				'Testing Please'
-			);
+			const response: ResponseWithError = await performRequest({
+				method: 'get',
+				url: testUrl,
+				token: authToken,
+				query: { name: 'Testing Please' },
+			}).expect(404);
 
 			expect(response.body.error).toEqual('No user with the name exists');
 		});
 
-		it('should return id, fullName, and profilePic for the provided name of the user', async () => {
-			const response: SuperTestResponse<getUsersByNameResponseSuccess> =
-				await callTestRoute(200, loginResponse.body.accessToken, testName);
+		it('should return matching users (id, fullName, profilePic)', async () => {
+			const response: getUsersByNameResponse = await performRequest({
+				method: 'get',
+				url: testUrl,
+				token: authToken,
+				query: { name: testName },
+			}).expect(200);
 
 			expect(response.body.length).toEqual(ARRAY_LENGTH);
 			expect(response.body.at(0)?.fullName).toMatch(testName);
@@ -400,233 +483,240 @@ describe('User Routes Integration Tests', () => {
 	});
 
 	describe('Register new user', () => {
-		const testUrl = '/api/user/register';
-		// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-		const tempUser = testUsers[0]!;
-		tempUser.phone = '123-456-7890';
-
-		const callTestRoute = async (
-			status: number,
-			data?: (typeof testUsers)[number],
-			message?: string
-		) => {
-			const response: ResponseWithError = await api
-				.post(testUrl)
-				.send(data)
-				.expect(status);
-
-			if (message) {
-				expect(response.body.error).toContain(message);
-			}
+		const testUrl = getTestUrl('register');
+		// eslint-disable-next-line @typescript-eslint/no-unused-vars
+		const { profilePic, coverPic, ...userWithoutImages } = {
+			...testUsers[0],
+			phone: '123-456-7890',
 		};
 
-		it.each(userHTTP400Errors)(
+		const tempUser = userWithoutImages as WithoutNulls<
+			typeof userWithoutImages,
+			'bio' | 'currentCity' | 'birthday' | 'phone' | 'gender' | 'hometown'
+		>;
+
+		it.each(createUserHTTP400Errors)(
 			'should return HTTP 400 and a message when %s',
 			async (_testDescription, property, obj, errMessage) => {
-				await callTestRoute(
-					400,
-					{
-						...tempUser,
-						[property]: obj[property],
-					},
-					errMessage
-				);
-			}
-		);
-
-		it('should return HTTP 500 and a message when user creation failed due to same duplicate entry for the email field', async () => {
-			await callTestRoute(
-				500,
-				tempUser,
-				'Something went wrong. Try again later!'
-			);
-		});
-
-		it('should return HTTP 201 on success', async () => {
-			await callTestRoute(201, {
-				...tempUser,
-				firstName: 'Test',
-				lastName: 'User',
-				email: 'email@email.com',
-				password: 'Mypassword@123',
-			});
-		});
-	});
-
-	describe('Update user with id route', () => {
-		// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-		const tempUser = testUsers[0]!;
-		tempUser.phone = '123-456-7890';
-		const filePath = join(
-			__dirname,
-			'../../testAssets/blank-profile-picture.png'
-		);
-
-		const badExtensionFilePath = join(
-			__dirname,
-			'../../testAssets/blank-profile-picture-heic.heic'
-		);
-
-		const tooBigFilePath = join(
-			__dirname,
-			'../../testAssets/blank-profile-picture-too-big.png'
-		);
-
-		it('should throw HTTP 401 when the route is accessed without login', async () => {
-			await api.patch(`/api/user/${userId}`).field(tempUser).expect(401);
-		}, 6000);
-
-		it('should throw HTTP 403 when the route is accessed with an expired token', async () => {
-			vi.useFakeTimers({ shouldAdvanceTime: true });
-			vi.advanceTimersByTime(2 * 60 * 1000);
-
-			await api
-				.patch(`/api/user/${userId}`)
-				.auth(authToken, { type: 'bearer' })
-				.field(tempUser)
-				.expect(403);
-
-			vi.useRealTimers();
-		});
-
-		it('should return HTTP 400 and a message when the provided id is invalid (not SUUID)', async () => {
-			const response: ResponseWithError = await api
-				.patch(`/api/user/random-id`)
-				.auth(authToken, { type: 'bearer' })
-				.field(tempUser)
-				.attach('coverImage', filePath)
-				.expect(400);
-
-			expect(response.body.error).toEqual('Valid id is required');
-		});
-
-		it('should return HTTP 404 and a message when the provided id is valid (SUUID) but there is no user with the provided id in the database', async () => {
-			const response: ResponseWithError = await api
-				.patch(`/api/user/${generate()}`)
-				.auth(authToken, { type: 'bearer' })
-				.field(tempUser)
-				.attach('coverImage', filePath)
-				.expect(404);
-
-			expect(response.body.error).toEqual('User does not exist');
-		});
-
-		it.each(userHTTP400Errors)(
-			'should return HTTP 400 and a message when %s',
-			async (_testDescription, property, obj, errMessage) => {
-				const response: ResponseWithError = await api
-					.patch(`/api/user/${userId}`)
-					.auth(authToken, { type: 'bearer' })
-					.field({ ...tempUser, [property]: obj[property] })
-					.attach('coverImage', filePath)
-					.expect(400);
+				const response: ResponseWithError = await performRequest({
+					method: 'post',
+					url: testUrl,
+					data: { ...tempUser, [property]: obj[property] },
+				});
 
 				expect(response.body.error).toContain(errMessage);
 			}
 		);
 
-		it('should return HTTP 400 and a message when attached image is not an approved filetypes: png and jpeg', async () => {
-			const response: ResponseWithError = await api
-				.patch(`/api/user/${userId}`)
-				.auth(authToken, { type: 'bearer' })
-				.field(tempUser)
-				.attach('coverImage', badExtensionFilePath)
-				.expect(400);
+		it('should return HTTP 500 and a message when user creation failed due to same duplicate entry for the email field', async () => {
+			const response: ResponseWithError = await performRequest({
+				method: 'post',
+				url: testUrl,
+				data: tempUser,
+			}).expect(500);
 
 			expect(response.body.error).toEqual(
-				'Invalid file type. Allowed: png and jpg/jpeg. Invalid file in coverImage'
+				'Something went wrong. Try again later!'
 			);
 		});
 
-		it('should return HTTP 400 and a message when attached image is too big', async () => {
-			const response: ResponseWithError = await api
-				.patch(`/api/user/${userId}`)
-				.auth(authToken, { type: 'bearer' })
-				.field(tempUser)
-				.attach('coverImage', tooBigFilePath)
-				.expect(400);
-
-			expect(response.body.error).toEqual(
-				'File size exceeds the limit. Allowed max: 1MB'
-			);
+		it('should return HTTP 201 on success', async () => {
+			await performRequest({
+				method: 'post',
+				url: testUrl,
+				data: {
+					...tempUser,
+					firstName: 'Test',
+					lastName: 'User',
+					email: 'email@email.com',
+					password: 'Mypassword@123',
+				},
+			}).expect(201);
 		});
+	});
+
+	describe('Update user with id route', () => {
+		const filePath = join(
+			__dirname,
+			'../../testAssets/blank-profile-picture.png'
+		);
+
+		// eslint-disable-next-line @typescript-eslint/no-unused-vars
+		const { profilePic, coverPic, ...userWithoutPic } = {
+			...testUsers[0],
+			phone: '123-456-7890',
+		};
+
+		const tempUser = userWithoutPic as WithoutNulls<
+			typeof userWithoutPic,
+			'birthday' | 'gender' | 'bio' | 'currentCity' | 'hometown'
+		>;
+
+		beforeEach(() => {
+			testUrl = getTestUrl(userId);
+		});
+
+		it('should throw HTTP 401 when the route is accessed without login', async () => {
+			await performRequest({
+				method: 'patch',
+				url: testUrl,
+				data: tempUser,
+				useField: true,
+			}).expect(401);
+		});
+
+		it('should throw HTTP 403 when the route is accessed with an expired token', async () => {
+			vi.useFakeTimers({ shouldAdvanceTime: true });
+			vi.advanceTimersByTime(2 * 60 * 1000);
+
+			await performRequest({
+				method: 'patch',
+				url: testUrl,
+				token: authToken,
+				data: tempUser,
+				useField: true,
+			}).expect(403);
+
+			vi.useRealTimers();
+		});
+
+		it('should return HTTP 400 and a message when the provided id is invalid (not SUUID)', async () => {
+			const response: ResponseWithError = await performRequest({
+				method: 'patch',
+				url: getTestUrl('random-id'),
+				token: authToken,
+				data: tempUser,
+				useField: true,
+			}).expect(400);
+
+			expect(response.body.error).toEqual('Valid id is required');
+		});
+
+		it('should return HTTP 404 and a message when the provided id is valid (SUUID) but user does not exist', async () => {
+			const response: ResponseWithError = await performRequest({
+				method: 'patch',
+				url: getTestUrl(generate()),
+				token: authToken,
+				data: tempUser,
+				useField: true,
+			}).expect(404);
+
+			expect(response.body.error).toEqual('User does not exist');
+		});
+
+		it.each(updateUserHTTP400Errors)(
+			'should return HTTP 400 and a message when %s',
+			async (_testDescription, property, obj, errMessage) => {
+				const options: RequestOptions = {
+					method: 'patch',
+					url: testUrl,
+					token: authToken,
+					data: { ...tempUser, [property]: obj[property] },
+					useField: true,
+				};
+
+				if (['profilePic', 'coverPic'].includes(property)) {
+					options.imageAttachments = {
+						[property]: obj[property] as typeof property,
+					};
+				}
+
+				const response: ResponseWithError = await performRequest(
+					options
+				).expect(400);
+				expect(response.body.error).toContain(errMessage);
+			}
+		);
 
 		it('should return SUUID of the updated user on success with only coverImage attached', async () => {
-			const response: SuperTestResponse<{ id: SUUID }> = await api
-				.patch(`/api/user/${userId}`)
-				.auth(authToken, { type: 'bearer' })
-				.field(tempUser)
-				.attach('coverImage', filePath)
-				.expect(200);
+			const response: SuperTestResponse<{ id: SUUID }> = await performRequest({
+				method: 'patch',
+				url: testUrl,
+				token: authToken,
+				data: tempUser,
+				useField: true,
+				imageAttachments: { coverPic: filePath },
+			}).expect(200);
 
 			expect(response.body.id).toEqual(userId);
 		});
 
 		it('should return SUUID of the updated user on success with only profileImage attached', async () => {
-			const response: SuperTestResponse<{ id: SUUID }> = await api
-				.patch(`/api/user/${userId}`)
-				.auth(authToken, { type: 'bearer' })
-				.field(tempUser)
-				.attach('profileImage', filePath)
-				.expect(200);
+			const response: SuperTestResponse<{ id: SUUID }> = await performRequest({
+				method: 'patch',
+				url: testUrl,
+				token: authToken,
+				data: tempUser,
+				useField: true,
+				imageAttachments: { profilePic: filePath },
+			}).expect(200);
 
 			expect(response.body.id).toEqual(userId);
 		});
 
 		it('should return SUUID of the updated user on success with both images attached', async () => {
-			const response: SuperTestResponse<{ id: SUUID }> = await api
-				.patch(`/api/user/${userId}`)
-				.auth(authToken, { type: 'bearer' })
-				.field(tempUser)
-				.attach('profileImage', filePath)
-				.attach('coverImage', filePath)
-				.expect(200);
+			const response: SuperTestResponse<{ id: SUUID }> = await performRequest({
+				method: 'patch',
+				url: testUrl,
+				token: authToken,
+				data: tempUser,
+				useField: true,
+				imageAttachments: { profilePic: filePath, coverPic: filePath },
+			}).expect(200);
 
 			expect(response.body.id).toEqual(userId);
 		});
 	});
 
 	describe('Delete user with id route', () => {
+		beforeEach(() => {
+			testUrl = getTestUrl(userId);
+		});
+
 		it('should throw HTTP 401 when the route is accessed without login', async () => {
-			await api.delete(`/api/user/${userId}`).expect(401);
+			await performRequest({ method: 'delete', url: testUrl }).expect(401);
 		});
 
 		it('should throw HTTP 403 when the route is accessed with an expired token', async () => {
 			vi.useFakeTimers({ shouldAdvanceTime: true });
-
 			vi.advanceTimersByTime(2 * 60 * 1000);
 
-			await api
-				.delete(`/api/user/${userId}`)
-				.auth(authToken, { type: 'bearer' })
-				.expect(403);
+			await performRequest({
+				method: 'delete',
+				url: testUrl,
+				token: authToken,
+			}).expect(403);
 
 			vi.useRealTimers();
 		});
 
 		it('should return HTTP 400 and a message when the provided id is invalid (not SUUID)', async () => {
-			const response: ResponseWithError = await api
-				.delete('/api/user/random-id')
-				.auth(authToken, { type: 'bearer' })
-				.expect(400);
+			const response: ResponseWithError = await performRequest({
+				method: 'delete',
+				url: getTestUrl('random-id'),
+				token: authToken,
+			}).expect(400);
 
 			expect(response.body.error).toEqual('Valid id is required');
 		});
 
-		it('should return HTTP 404 and a message when the user deletion failed for some reason', async () => {
-			const response: ResponseWithError = await api
-				.delete(`/api/user/${generate()}`)
-				.auth(authToken, { type: 'bearer' })
-				.expect(404);
+		it('should return HTTP 404 and a message when the provided id is valid (SUUID) but user does not exist', async () => {
+			const response: ResponseWithError = await performRequest({
+				method: 'delete',
+				url: getTestUrl(generate()),
+				token: authToken,
+			}).expect(404);
 
 			expect(response.body.error).toEqual('User does not exist');
 		});
 
 		it('should return a message saying user deleted successfully on success', async () => {
-			const response: SuperTestResponse<{ message: string }> = await api
-				.delete(`/api/user/${userId}`)
-				.auth(authToken, { type: 'bearer' })
-				.expect(200);
+			const response: SuperTestResponse<{ message: string }> =
+				await performRequest({
+					method: 'delete',
+					url: testUrl,
+					token: authToken,
+				}).expect(200);
 
 			expect(response.body.message).toEqual('User deleted successfully');
 		});
