@@ -6,7 +6,6 @@ import {
 	createPost,
 	deletePost,
 	getPosts,
-	PostAssets,
 	updatePost,
 } from './post.controllers.js';
 import {
@@ -58,7 +57,10 @@ describe('Post Controller Functions', () => {
 					never,
 					{ cursor?: string; user?: 'me' | SUUID }
 				>,
-				res as unknown as Response
+				res as unknown as Response<{
+					posts: Awaited<ReturnType<typeof findPosts>>;
+					nextCursor: string | null;
+				}>
 			);
 
 			expect(nextCursor).not.toBeNull();
@@ -83,9 +85,7 @@ describe('Post Controller Functions', () => {
 		const callTestFn = async (id: SUUID) => {
 			req.params.id = id;
 			await updatePost(
-				req as unknown as Request<{ id: SUUID }, never, PostType> & {
-					files?: PostAssets;
-				},
+				req as unknown as Request<{ id: SUUID }, never, PostType>,
 				res as unknown as Response
 			);
 		};

@@ -1,9 +1,11 @@
 import { db } from '@/db/index.js';
 import { collegeTypeEnum } from '@/db/schema/college.js';
 import { user, userGenderEnum } from '@/db/schema/user.js';
+import { PostType } from '@/features/post/post.zod.schemas.js';
 import { faker } from '@faker-js/faker';
 import { hash } from 'argon2';
 import { eq } from 'drizzle-orm';
+import { Response as ExpressResponse } from 'express';
 import { SUUID } from 'short-uuid';
 import type { Readable } from 'stream';
 import type { Response } from 'supertest';
@@ -14,6 +16,17 @@ export type ResponseWithError = SuperTestResponse<{ error: string }>;
 export type LoginResponseWithSuccess = SuperTestResponse<{
 	accessToken: string;
 }>;
+
+export type HTTPError400TestsType<T> = [
+	test_description: string,
+	property: keyof T,
+	obj: Partial<Record<keyof T, T[keyof T]>>,
+	errMessage: string
+];
+
+export type ExtractResponseBody<T> = T extends ExpressResponse<infer ResBody>
+	? ResBody
+	: never;
 
 export const randomUserId = async (testEmails: string[], email?: string) => {
 	const userEmails = email
@@ -103,4 +116,10 @@ export const createTestFile = (fieldName: 'coverImage' | 'profileImage') => ({
 	stream: 'mockStream' as unknown as Readable,
 	buffer: 'mockBuffer' as unknown as Buffer,
 	filename: 'mockFilename',
+});
+
+export const createTestPost = (): PostType & { userId: string } => ({
+	userId: '',
+	content: faker.word.words({ count: { min: 10, max: 20 } }),
+	assets: [faker.image.urlPicsumPhotos()],
 });

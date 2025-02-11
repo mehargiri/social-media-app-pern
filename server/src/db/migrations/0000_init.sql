@@ -87,8 +87,8 @@ CREATE TABLE "notification_receiver" (
 CREATE TABLE "post" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"user_id" uuid NOT NULL,
-	"content" text,
-	"asset" text[],
+	"content" text NOT NULL,
+	"assets" text[],
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
 	"updated_at" timestamp with time zone DEFAULT now() NOT NULL
 );

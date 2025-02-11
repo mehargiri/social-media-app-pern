@@ -10,11 +10,12 @@ import {
 } from './post.services.js';
 import { PostType } from './post.zod.schemas.js';
 
-export type PostAssets = Partial<Record<'assets', Express.Multer.File[]>>;
-
 export const getPosts = async (
 	req: Request<never, never, never, { cursor?: string; user?: 'me' | SUUID }>,
-	res: Response
+	res: Response<{
+		posts: Awaited<ReturnType<typeof findPosts>>;
+		nextCursor: string | null;
+	}>
 ) => {
 	const { cursor, user } = { ...req.query };
 
@@ -37,14 +38,16 @@ export const getPosts = async (
 };
 
 export const createPost = async (
-	req: Request<never, never, PostType> & { files?: PostAssets },
+	req: Request<never, never, PostType>,
 	res: Response
 ) => {
-	const assetPaths = req.files?.assets?.map((asset) => asset.path);
+	const attachedFiles = req.files as Express.Multer.File[] | undefined;
+
+	const assetPaths = attachedFiles?.map((item) => item.path);
 
 	await makePost({
 		...req.body,
-		asset: assetPaths,
+		assets: assetPaths,
 		userId: req.userId as SUUID,
 	});
 
@@ -52,22 +55,25 @@ export const createPost = async (
 };
 
 export const updatePost = async (
-	req: Request<{ id: SUUID }, never, PostType> & { files?: PostAssets },
+	req: Request<{ id: SUUID }, never, PostType>,
 	res: Response
 ) => {
 	const { id } = req.params;
 	validateSUUID(id);
 
-	const assetPaths = req.files?.assets?.map((asset) => asset.path);
+	const attachedFiles = req.files as Express.Multer.File[] | undefined;
+
+	const assetPaths = attachedFiles?.map((item) => item.path);
 
 	const isPost = await postExists({ id });
 	if (!isPost) throw Error('Post does not exist', { cause: 404 });
 
 	const updatedPost = await updatePostById({
 		...req.body,
-		asset: assetPaths,
+		assets: assetPaths,
 		id,
 		userId: req.userId as SUUID,
+		updatedAt: new Date(),
 	});
 
 	return void res.json(updatedPost);

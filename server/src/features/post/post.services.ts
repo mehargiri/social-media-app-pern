@@ -15,7 +15,7 @@ export const findPosts = async (data: { cursor?: string; userId?: SUUID }) => {
 			profilePic: user.profilePic,
 			id: post.id,
 			content: post.content,
-			postAssets: post.asset,
+			postAssets: post.assets,
 			postCreatedAt: post.createdAt,
 			postUpdatedAt: post.updatedAt,
 		})
@@ -56,14 +56,17 @@ export const makePost = async (data: PostType & { userId: SUUID }) => {
 
 // Update Posts
 export const updatePostById = async (
-	data: PostType & { id: SUUID; userId: SUUID }
+	data: PostType & { id: SUUID; userId: SUUID; updatedAt: Date }
 ) => {
 	const { id, userId, ...goodData } = data;
 	const updatedPost = await db
 		.update(post)
 		.set(goodData)
 		.where(
-			and(eq(post.id, convertToUUID(id)), eq(user.id, convertToUUID(userId)))
+			and(
+				eq(post.id, convertToUUID(id)),
+				eq(post.userId, convertToUUID(userId))
+			)
 		)
 		.returning({ id: post.id });
 
@@ -80,7 +83,10 @@ export const deletePostById = async (data: { id: SUUID; userId: SUUID }) => {
 	const deletedPost = await db
 		.delete(post)
 		.where(
-			and(eq(post.id, convertToUUID(id)), eq(user.id, convertToUUID(userId)))
+			and(
+				eq(post.id, convertToUUID(id)),
+				eq(post.userId, convertToUUID(userId))
+			)
 		)
 		.returning({ id: post.id });
 
