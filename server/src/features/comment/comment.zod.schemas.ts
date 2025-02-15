@@ -1,4 +1,4 @@
-import { comment } from '@/db/schema/index.js';
+import { comment } from '@/db/schema/comment.js';
 import { createInsertSchema } from 'drizzle-zod';
 import short, { SUUID } from 'short-uuid';
 
@@ -31,6 +31,14 @@ export const createCommentSchema = createInsertSchema(comment, {
 	userId: true,
 	createdAt: true,
 	updatedAt: true,
+	repliesCount: true,
+	likesCount: true,
+});
+
+export const updateCommentSchema = createCommentSchema.omit({
+	postId: true,
+	commentLevel: true,
+	parentCommentId: true,
 });
 
 export type CommentType = Omit<
@@ -39,4 +47,9 @@ export type CommentType = Omit<
 > & {
 	postId: SUUID;
 	parentCommentId: SUUID | null;
+};
+
+export type UpdateCommentType = typeof updateCommentSchema._type & {
+	repliesCount: number;
+	likesCount: number;
 };

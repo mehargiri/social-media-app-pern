@@ -26,6 +26,10 @@ CREATE TABLE "comment" (
 	"parent_comment_id" uuid,
 	"content" text NOT NULL,
 	"comment_level" integer DEFAULT 0 NOT NULL,
+	"replies_count" integer DEFAULT 0 NOT NULL,
+	"likes_count" integer DEFAULT 0 NOT NULL,
+	"top_like_type1" "like_type",
+	"top_like_type2" "like_type",
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
 	"updated_at" timestamp with time zone DEFAULT now() NOT NULL,
 	CONSTRAINT "comment_level_check" CHECK ("comment"."comment_level" >= 0 AND "comment"."comment_level" <= 2)

@@ -9,6 +9,7 @@ import {
 } from 'drizzle-orm/pg-core';
 import { timestamps } from './columns.helpers.js';
 import { like, post, user } from './index.js';
+import { likeTypesEnum } from './like.js';
 
 export const comment = pgTable(
 	'comment',
@@ -25,6 +26,10 @@ export const comment = pgTable(
 		}),
 		content: text().notNull(),
 		commentLevel: integer().default(0).notNull(),
+		repliesCount: integer().default(0).notNull(),
+		likesCount: integer().default(0).notNull(),
+		topLikeType1: likeTypesEnum(),
+		topLikeType2: likeTypesEnum(),
 		...timestamps,
 	},
 	(table) => [
