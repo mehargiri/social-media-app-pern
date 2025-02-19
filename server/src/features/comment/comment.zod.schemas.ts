@@ -31,6 +31,8 @@ export const createCommentSchema = createInsertSchema(comment, {
 	userId: true,
 	createdAt: true,
 	updatedAt: true,
+	topLikeType1: true,
+	topLikeType2: true,
 	repliesCount: true,
 	likesCount: true,
 });
@@ -49,7 +51,4 @@ export type CommentType = Omit<
 	parentCommentId: SUUID | null;
 };
 
-export type UpdateCommentType = typeof updateCommentSchema._type & {
-	repliesCount: number;
-	likesCount: number;
-};
+export type UpdateCommentType = typeof updateCommentSchema._type;

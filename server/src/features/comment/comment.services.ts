@@ -170,3 +170,26 @@ export const commentExists = async (data: { id: SUUID }) => {
 
 	return isComment[0] ? true : false;
 };
+
+export const updateParentCommentReplyCount = async (data: {
+	id: SUUID;
+	type: 'increase' | 'decrease';
+}) => {
+	const { id, type } = data;
+	const [currentParentCommentReplyCount] = await db
+		.select({ repliesCount: comment.repliesCount })
+		.from(comment)
+		.where(eq(comment.id, convertToUUID(id)));
+
+	if (currentParentCommentReplyCount) {
+		await db
+			.update(comment)
+			.set({
+				repliesCount:
+					type === 'increase'
+						? currentParentCommentReplyCount.repliesCount + 1
+						: currentParentCommentReplyCount.repliesCount - 1,
+			})
+			.where(eq(comment.id, convertToUUID(id)));
+	}
+};

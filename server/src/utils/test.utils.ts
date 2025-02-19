@@ -2,6 +2,7 @@ import { db } from '@/db/index.js';
 import { collegeTypeEnum } from '@/db/schema/college.js';
 import { user, userGenderEnum } from '@/db/schema/user.js';
 import { CollegeType } from '@/features/college/college.zod.schemas.js';
+import { CommentType } from '@/features/comment/comment.zod.schemas.js';
 import { HighschoolType } from '@/features/highschool/highschool.zod.schemas.js';
 import { PostType } from '@/features/post/post.zod.schemas.js';
 import { UserType } from '@/features/user/user.zod.schemas.js';
@@ -130,4 +131,12 @@ export const createTestPost = (): PostType & { userId: string } => ({
 	userId: '',
 	content: faker.word.words({ count: { min: 10, max: 20 } }),
 	assets: [faker.image.urlPicsumPhotos()],
+});
+
+export const createTestComment = (): CommentType & { userId: string } => ({
+	content: faker.word.words({ count: { min: 10, max: 20 } }),
+	commentLevel: faker.number.int({ min: 0, max: 2 }),
+	postId: '' as SUUID,
+	parentCommentId: '' as SUUID,
+	userId: '',
 });
