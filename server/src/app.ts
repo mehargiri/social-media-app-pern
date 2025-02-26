@@ -1,5 +1,7 @@
 import authRoutes from '@/features/auth/auth.routes.js';
 import collegeRoutes from '@/features/college/college.routes.js';
+import commentRoutes from '@/features/comment/comment.routes.js';
+import replyRoutes from '@/features/comment/reply.routes.js';
 import highschoolRoutes from '@/features/highschool/highschool.routes.js';
 import postRoutes from '@/features/post/post.routes.js';
 import userRoutes from '@/features/user/user.routes.js';
@@ -28,6 +30,8 @@ app.use('/api/highschool', highschoolRoutes);
 app.use('/api/college', collegeRoutes);
 app.use('/api/work', workRoutes);
 app.use('/api/posts', postRoutes);
+app.use('/api/comments', commentRoutes);
+app.use('/api/replies', replyRoutes);
 
 app.use(errorHandler);
 

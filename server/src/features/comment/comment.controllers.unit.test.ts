@@ -1,4 +1,8 @@
-import { createTestComment, sampleSUUID } from '@/utils/test.utils.js';
+import {
+	createTestComment,
+	createTestReply,
+	sampleSUUID,
+} from '@/utils/test.utils.js';
 import { Request, Response } from 'express';
 import { generate, SUUID } from 'short-uuid';
 import { beforeEach, describe, expect, it, Mock, vi } from 'vitest';
@@ -19,43 +23,29 @@ import {
 } from './comment.services.js';
 import { CommentType, UpdateCommentType } from './comment.zod.schemas.js';
 
-const defaultComment = {
-	content: 'Some content',
-	commentLevel: 0,
-	createdAt: new Date(),
-	postId: sampleSUUID,
-	userId: sampleSUUID,
-	parentCommentId: '' as SUUID,
-};
-
 const testComments = Array.from({ length: 5 }).map((_item, index) => {
-	const comment = createTestComment();
-	const isEven = index % 2 === 0;
 	return {
-		...comment,
-		parentCommentId: isEven ? sampleSUUID : '',
+		...createTestComment(),
 		postId: sampleSUUID,
-		userId: sampleSUUID,
 		createdAt: new Date(Date.now() + index * 24 * 60 * 60 * 1000),
 	};
 });
 
-const commentToCreate =
-	testComments.find((comment) => comment.parentCommentId === '') ??
-	defaultComment;
+const testReplies = Array.from({ length: 5 }).map((_item, index) => ({
+	...createTestReply({ commentLevel: 1 }),
+	parentCommentId: sampleSUUID,
+	createdAt: new Date(Date.now() + index * 24 * 60 * 60 * 1000),
+}));
 
-const replyToCreate = testComments.find(
-	(comment) => comment.parentCommentId !== '' && comment.commentLevel !== 0
-) ?? { ...defaultComment, parentCommentId: sampleSUUID, commentLevel: 1 };
-
-const replyToNotCreate = testComments.find(
-	(comment) => comment.parentCommentId !== '' && comment.commentLevel === 0
-) ?? { ...defaultComment, parentCommentId: sampleSUUID, commentLevel: 0 };
+const commentToCreate = testComments[0];
+const replyToCreate = testReplies[0];
+const replyToNotCreate = testReplies[1];
+if (replyToNotCreate) replyToNotCreate.commentLevel = 0;
 
 describe('Comment Controller Functions', () => {
 	const req = {
 		params: { id: sampleSUUID },
-		query: { parentCommentId: sampleSUUID },
+		query: { parentCommentId: sampleSUUID, postId: sampleSUUID },
 		body: commentToCreate,
 	};
 
@@ -75,18 +65,14 @@ describe('Comment Controller Functions', () => {
 	}));
 
 	describe('getComments function', () => {
-		const comments = testComments.filter(
-			(comment) => comment.parentCommentId === ''
-		);
-
-		const lastDate = comments[comments.length - 1]?.createdAt.toISOString();
+		const lastDate =
+			testComments[testComments.length - 1]?.createdAt.toISOString();
 
 		const nextCursor = lastDate
 			? Buffer.from(lastDate).toString('base64url')
 			: undefined;
 
-		it('should call res.json with the comments and a nextCursor value on success', async () => {
-			(findComments as Mock).mockResolvedValue(comments);
+		const callTestFn = async () => {
 			await getComments(
 				req as unknown as Request<
 					never,
@@ -99,43 +85,65 @@ describe('Comment Controller Functions', () => {
 					nextCursor: string | null;
 				}>
 			);
+		};
+
+		it('should throw Error when the postId is invalid', async () => {
+			req.query.postId = 'random-id' as SUUID;
+			await expect(callTestFn()).rejects.toThrowError(
+				Error('Valid id is required for post')
+			);
+		});
+
+		it('should call res.json with the comments and a nextCursor value on success', async () => {
+			req.query.postId = sampleSUUID;
+			(findComments as Mock).mockResolvedValue(testComments);
+			await callTestFn();
 
 			expect(res.json).toHaveBeenCalledWith({
-				comments: comments,
+				comments: testComments,
 				nextCursor,
 			});
 		});
 	});
 
 	describe('getReplies function', () => {
-		const replies = testComments.filter(
-			(comment) => comment.parentCommentId !== ''
-		);
-
-		const lastDate = replies[replies.length - 1]?.createdAt.toISOString();
+		const lastDate =
+			testReplies[testReplies.length - 1]?.createdAt.toISOString();
 
 		const nextCursor = lastDate
 			? Buffer.from(lastDate).toString('base64url')
 			: undefined;
 
-		it('should call res.json with the replies and a nextCursor value on success', async () => {
-			(findReplies as Mock).mockResolvedValue(replies);
+		const callTestFn = async () => {
 			await getReplies(
-				req as Request<
+				req as unknown as Request<
 					never,
 					never,
 					never,
-					{ parentCommentId: SUUID; commentLevel?: string; cursor?: string }
+					{ parentCommentId: SUUID; cursor?: string }
 				>,
 				res as unknown as Response<{
 					replies: Awaited<ReturnType<typeof findReplies>>;
 					nextCursor: string | null;
 				}>
 			);
+		};
+
+		it('should throw Error when the parentCommentId is invalid', async () => {
+			req.query.parentCommentId = 'random-id' as SUUID;
+			await expect(callTestFn()).rejects.toThrowError(
+				Error('Valid id is required for parent comment')
+			);
+		});
+
+		it('should call res.json with the replies and a nextCursor value on success', async () => {
+			req.query.parentCommentId = sampleSUUID;
+			(findReplies as Mock).mockResolvedValue(testReplies);
+			await callTestFn();
 
 			expect(nextCursor).not.toBeNull();
 			expect(res.json).toHaveBeenCalledWith({
-				replies: replies,
+				replies: testReplies,
 				nextCursor,
 			});
 		});
@@ -220,12 +228,7 @@ describe('Comment Controller Functions', () => {
 			req.params.id = id;
 			if (parentCommentId) req.query.parentCommentId = parentCommentId;
 			await deleteComment(
-				req as unknown as Request<
-					{ id: SUUID },
-					never,
-					never,
-					{ parentCommentId?: SUUID }
-				>,
+				req as unknown as Request<{ id: SUUID }>,
 				res as unknown as Response
 			);
 		};
@@ -233,14 +236,6 @@ describe('Comment Controller Functions', () => {
 		it('should throw Error when invalid id is provided in the request params', async () => {
 			await expect(callTestFn('random-id' as SUUID)).rejects.toThrowError(
 				Error('Valid id is required for comment', { cause: 400 })
-			);
-		});
-
-		it('should throw Error when invalid id is provided in the request query', async () => {
-			await expect(
-				callTestFn(sampleSUUID, 'random-id' as SUUID)
-			).rejects.toThrowError(
-				Error('Valid id is required for parent comment', { cause: 400 })
 			);
 		});
 

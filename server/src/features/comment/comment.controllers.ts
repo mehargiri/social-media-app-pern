@@ -21,6 +21,7 @@ export const getComments = async (
 	}>
 ) => {
 	const { postId, cursor } = req.query;
+	validateSUUID(postId, 'post');
 
 	const decodedCursor = cursor
 		? Buffer.from(cursor, 'base64url').toString()
@@ -43,14 +44,15 @@ export const getReplies = async (
 		never,
 		never,
 		never,
-		{ parentCommentId: SUUID; commentLevel?: string; cursor?: string }
+		{ parentCommentId: SUUID; cursor?: string }
 	>,
 	res: Response<{
 		replies: Awaited<ReturnType<typeof findReplies>>;
 		nextCursor: string | null;
 	}>
 ) => {
-	const { parentCommentId, cursor, commentLevel } = req.query;
+	const { parentCommentId, cursor } = req.query;
+	validateSUUID(parentCommentId, 'parent comment');
 
 	const decodedCursor = cursor
 		? Buffer.from(cursor, 'base64url').toString()
@@ -59,7 +61,6 @@ export const getReplies = async (
 	const totalReplies = await findReplies({
 		parentCommentId,
 		cursor: decodedCursor,
-		commentLevel: Number(commentLevel),
 	});
 
 	const lastReplyDate =
@@ -128,25 +129,20 @@ export const updateComment = async (
 
 // Delete Comment
 export const deleteComment = async (
-	req: Request<{ id: SUUID }, never, never, { parentCommentId?: SUUID }>,
+	req: Request<{ id: SUUID }>,
 	res: Response
 ) => {
 	const { id } = req.params;
-	const { parentCommentId } = req.query;
 	validateSUUID(id, 'comment');
-
-	if (parentCommentId) {
-		validateSUUID(parentCommentId, 'parent comment');
-	}
 
 	const isComment = await commentExists({ id });
 	if (!isComment) throw Error('Comment does not exist', { cause: 404 });
 
 	await deleteCommentById({ id, userId: req.userId as SUUID });
 
-	if (parentCommentId) {
+	if (isComment.parentCommentId) {
 		await updateParentCommentReplyCount({
-			id: parentCommentId,
+			id: isComment.parentCommentId,
 			type: 'decrease',
 		});
 	}

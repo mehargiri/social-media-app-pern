@@ -25,10 +25,8 @@ export const findComments = async (data: {
 			repliesCount: comment.repliesCount,
 			createdAt: comment.createdAt,
 			updatedAt: comment.updatedAt,
-			author: {
-				fullName: user.fullName,
-				profilePic: user.profilePic,
-			},
+			fullName: user.fullName,
+			profilePic: user.profilePic,
 		})
 		.from(comment)
 		.leftJoin(user, eq(comment.userId, user.id))
@@ -47,10 +45,9 @@ export const findComments = async (data: {
 
 export const findReplies = async (data: {
 	parentCommentId: SUUID;
-	commentLevel?: number;
 	cursor?: string;
 }) => {
-	const { parentCommentId, commentLevel = 0, cursor } = data;
+	const { parentCommentId, cursor } = data;
 
 	const replies = await db
 		.select({
@@ -63,19 +60,16 @@ export const findReplies = async (data: {
 			topLikeType2: comment.topLikeType2,
 			createdAt: comment.createdAt,
 			updatedAt: comment.updatedAt,
-			...(commentLevel < 2 ? { repliesCount: comment.repliesCount } : {}),
-			...(commentLevel < 2 ? { commentLevel: comment.commentLevel } : {}),
-			author: {
-				fullName: user.fullName,
-				profilePic: user.profilePic,
-			},
+			repliesCount: comment.repliesCount,
+			commentLevel: comment.commentLevel,
+			fullName: user.fullName,
+			profilePic: user.profilePic,
 		})
 		.from(comment)
 		.leftJoin(user, eq(comment.userId, user.id))
 		.where(
 			and(
 				eq(comment.parentCommentId, convertToUUID(parentCommentId)),
-				eq(comment.commentLevel, commentLevel + 1),
 				cursor ? lt(comment.createdAt, new Date(cursor)) : undefined
 			)
 		)
@@ -164,11 +158,20 @@ export const deleteCommentById = async (data: { id: SUUID; userId: SUUID }) => {
 
 export const commentExists = async (data: { id: SUUID }) => {
 	const isComment = await db
-		.select({ content: comment.content })
+		.select({
+			content: comment.content,
+			parentCommentId: comment.parentCommentId,
+		})
 		.from(comment)
 		.where(eq(comment.id, convertToUUID(data.id)));
 
-	return isComment[0] ? true : false;
+	const [isCommentWithSUUID] = isComment.map((comment) => ({
+		...comment,
+		parentCommentId: comment.parentCommentId
+			? convertToSUUID(comment.parentCommentId)
+			: null,
+	}));
+	return isCommentWithSUUID;
 };
 
 export const updateParentCommentReplyCount = async (data: {
@@ -176,10 +179,7 @@ export const updateParentCommentReplyCount = async (data: {
 	type: 'increase' | 'decrease';
 }) => {
 	const { id, type } = data;
-	const [currentParentCommentReplyCount] = await db
-		.select({ repliesCount: comment.repliesCount })
-		.from(comment)
-		.where(eq(comment.id, convertToUUID(id)));
+	const currentParentCommentReplyCount = await getCommentRepliesCount({ id });
 
 	if (currentParentCommentReplyCount) {
 		await db
@@ -192,4 +192,14 @@ export const updateParentCommentReplyCount = async (data: {
 			})
 			.where(eq(comment.id, convertToUUID(id)));
 	}
+};
+
+export const getCommentRepliesCount = async (data: { id: SUUID }) => {
+	const { id } = data;
+	const [selectedComment] = await db
+		.select({ repliesCount: comment.repliesCount })
+		.from(comment)
+		.where(eq(comment.id, convertToUUID(id)));
+
+	return selectedComment;
 };

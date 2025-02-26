@@ -133,9 +133,20 @@ export const createTestPost = (): PostType & { userId: string } => ({
 	assets: [faker.image.urlPicsumPhotos()],
 });
 
-export const createTestComment = (): CommentType & { userId: string } => ({
+export const createTestComment = (): Omit<CommentType, 'commentLevel'> & {
+	userId: string;
+} => ({
 	content: faker.word.words({ count: { min: 10, max: 20 } }),
-	commentLevel: faker.number.int({ min: 0, max: 2 }),
+	postId: '' as SUUID,
+	parentCommentId: null,
+	userId: '',
+});
+
+export const createTestReply = (data: {
+	commentLevel: number;
+}): CommentType & { userId: string } => ({
+	content: faker.word.words({ count: { min: 10, max: 20 } }),
+	commentLevel: data.commentLevel,
 	postId: '' as SUUID,
 	parentCommentId: '' as SUUID,
 	userId: '',
