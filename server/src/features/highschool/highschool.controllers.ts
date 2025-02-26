@@ -25,7 +25,7 @@ export const updateHighschool = async (
 	res: Response
 ) => {
 	const { id } = req.params;
-	validateSUUID(id);
+	validateSUUID(id, 'highschool');
 
 	const isHighschool = await highschoolExists({ id });
 	if (!isHighschool) throw Error('Highschool does not exist', { cause: 404 });
@@ -45,7 +45,7 @@ export const deleteHighschool = async (
 	res: Response
 ) => {
 	const { id } = req.params;
-	validateSUUID(id);
+	validateSUUID(id, 'highschool');
 
 	const isHighschool = await highschoolExists({ id });
 	if (!isHighschool) throw Error('Highschool does not exist', { cause: 404 });

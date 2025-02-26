@@ -53,7 +53,7 @@ describe('Work Controller Function', () => {
 
 		it('should throw Error when the provided id in req.params is invalid', async () => {
 			await expect(callTestFn('random-id' as SUUID)).rejects.toThrowError(
-				Error('Valid id is required', { cause: 400 })
+				Error('Valid id is required for work', { cause: 400 })
 			);
 		});
 
@@ -87,7 +87,7 @@ describe('Work Controller Function', () => {
 
 		it('should throw Error when the provided id in req.params is invalid', async () => {
 			await expect(callTestFn('random-id' as SUUID)).rejects.toThrowError(
-				Error('Valid id is required', { cause: 400 })
+				Error('Valid id is required for work', { cause: 400 })
 			);
 		});
 

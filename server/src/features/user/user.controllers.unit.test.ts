@@ -62,6 +62,7 @@ const testFiles: CustomUserFiles = {
 
 describe('User Controller Functions', () => {
 	const req = {
+		userId: mockUser.id,
 		params: {
 			id: mockUser.id,
 		},
@@ -81,10 +82,6 @@ describe('User Controller Functions', () => {
 		sendStatus: vi.fn(),
 	};
 
-	vi.mock('@/utils/general.utils.js', () => ({
-		validateSUUID: vi.fn().mockImplementation(() => true),
-	}));
-
 	vi.mock('./user.services.js', () => ({
 		findUserById: vi.fn(),
 		findUsersByName: vi.fn(),
@@ -99,42 +96,57 @@ describe('User Controller Functions', () => {
 	});
 
 	describe('getUser function', () => {
-		const callTestFn = async () => {
+		const callTestFn = async (id: SUUID) => {
+			req.params.id = id;
 			await getUser(
 				req as unknown as Request<{ id: SUUID }>,
 				res as unknown as Response<Awaited<ReturnType<typeof findUserById>>>
 			);
 		};
 
+		it('should throw Error when user id is invalid', async () => {
+			await expect(callTestFn('random-id' as SUUID)).rejects.toThrowError(
+				Error('Valid id is required for user', { cause: 400 })
+			);
+		});
+
 		it('should throw Error when user is not found', async () => {
 			(findUserById as Mock).mockResolvedValue(undefined);
 
-			await expect(callTestFn()).rejects.toThrowError(
+			await expect(callTestFn(mockUser.id)).rejects.toThrowError(
 				Error('User does not exist', { cause: 404 })
 			);
 		});
 
 		it('should call res.json when user exists', async () => {
+			req.params.id = mockUser.id;
 			(findUserById as Mock).mockResolvedValue(mockUser);
 
-			await callTestFn();
+			await callTestFn(mockUser.id);
 
 			expect(res.json).toHaveBeenCalledWith(mockUser);
 		});
 	});
 
 	describe('getMe function', () => {
-		const callTestFn = async () => {
+		const callTestFn = async (id: SUUID) => {
+			req.userId = id;
 			await getMe(
 				req as unknown as Request,
 				res as unknown as Response<Awaited<ReturnType<typeof findUserById>>>
 			);
 		};
 
+		it('should throw Error when user id is invalid', async () => {
+			await expect(callTestFn('random-id' as SUUID)).rejects.toThrowError(
+				Error('Valid id is required for user', { cause: 400 })
+			);
+		});
+
 		it('should throw Error when user is not found', async () => {
 			(findUserById as Mock).mockResolvedValue(undefined);
 
-			await expect(callTestFn()).rejects.toThrowError(
+			await expect(callTestFn(mockUser.id)).rejects.toThrowError(
 				Error('User does not exist', { cause: 404 })
 			);
 		});
@@ -142,7 +154,7 @@ describe('User Controller Functions', () => {
 		it('should call res.json when user exists', async () => {
 			(findUserById as Mock).mockResolvedValue(mockUser);
 
-			await callTestFn();
+			await callTestFn(mockUser.id);
 
 			expect(res.json).toHaveBeenCalledWith(mockUser);
 		});
@@ -201,17 +213,24 @@ describe('User Controller Functions', () => {
 	});
 
 	describe('deleteUser function', () => {
-		const callTestFn = async () => {
+		const callTestFn = async (id: SUUID) => {
+			req.params.id = id;
 			await deleteUser(
 				req as unknown as Request<{ id: SUUID }>,
 				res as unknown as Response
 			);
 		};
 
-		it('should throw Error when user deletion fails due to incorrect id', async () => {
+		it('should throw Error when user id is invalid', async () => {
+			await expect(callTestFn('random-id' as SUUID)).rejects.toThrowError(
+				Error('Valid id is required for user', { cause: 400 })
+			);
+		});
+
+		it('should throw Error when user does not exist', async () => {
 			(deleteUserById as Mock).mockResolvedValue(undefined);
 
-			await expect(callTestFn()).rejects.toThrowError(
+			await expect(callTestFn(mockUser.id)).rejects.toThrowError(
 				Error('User does not exist', { cause: 404 })
 			);
 		});
@@ -219,7 +238,7 @@ describe('User Controller Functions', () => {
 		it('should call res.json with a message on success', async () => {
 			(deleteUserById as Mock).mockResolvedValue({ id: mockUser.id });
 
-			await callTestFn();
+			await callTestFn(mockUser.id);
 
 			expect(res.json).toHaveBeenCalledWith({
 				message: 'User deleted successfully',
@@ -228,17 +247,24 @@ describe('User Controller Functions', () => {
 	});
 
 	describe('updateUser function', () => {
-		const callTestFn = async () => {
+		const callTestFn = async (id: SUUID) => {
+			req.params.id = id;
 			await updateUser(
 				req as unknown as Request<{ id: SUUID }, never, UserType>,
 				res as unknown as Response
 			);
 		};
 
+		it('should throw Error when user id is invalid', async () => {
+			await expect(callTestFn('random-id' as SUUID)).rejects.toThrowError(
+				Error('Valid id is required for user', { cause: 400 })
+			);
+		});
+
 		it('should throw Error when the user with given id does not exist', async () => {
 			(userExists as Mock).mockResolvedValue(undefined);
 
-			await expect(callTestFn()).rejects.toThrowError(
+			await expect(callTestFn(mockUser.id)).rejects.toThrowError(
 				Error('User does not exist', { cause: 404 })
 			);
 		});
@@ -247,7 +273,7 @@ describe('User Controller Functions', () => {
 			(userExists as Mock).mockResolvedValue({ id: mockUser.id });
 			(updateUserById as Mock).mockResolvedValue({ id: mockUser.id });
 
-			await callTestFn();
+			await callTestFn(mockUser.id);
 
 			expect(res.json).toHaveBeenCalledWith({ id: mockUser.id });
 		});

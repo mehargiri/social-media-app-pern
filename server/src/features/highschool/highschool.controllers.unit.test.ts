@@ -68,7 +68,7 @@ describe('Highschool Controller Functions', () => {
 
 		it('should throw Error when invalid id is provided in the request params', async () => {
 			await expect(callTestFn('random-id' as SUUID)).rejects.toThrowError(
-				Error('Valid id is required', { cause: 400 })
+				Error('Valid id is required for highschool', { cause: 400 })
 			);
 		});
 
@@ -102,7 +102,7 @@ describe('Highschool Controller Functions', () => {
 
 		it('should throw Error when invalid id is provided in the request params', async () => {
 			await expect(callTestFn('random-id' as SUUID)).rejects.toThrowError(
-				Error('Valid id is required', { cause: 400 })
+				Error('Valid id is required for highschool', { cause: 400 })
 			);
 		});
 

@@ -22,7 +22,7 @@ export const updateWork = async (
 	res: Response
 ) => {
 	const { id } = req.params;
-	validateSUUID(id);
+	validateSUUID(id, 'work');
 
 	const isWork = await workExists({ id });
 	if (!isWork) throw Error('Work does not exist', { cause: 404 });
@@ -42,7 +42,7 @@ export const deleteWork = async (
 	res: Response
 ) => {
 	const { id } = req.params;
-	validateSUUID(id);
+	validateSUUID(id, 'work');
 
 	const isWork = await workExists({ id });
 	if (!isWork) throw Error('Work does not exist', { cause: 404 });

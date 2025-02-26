@@ -67,7 +67,10 @@ describe('Auth Routes Integration Tests', () => {
 				400
 			);
 
-			expect(response.body.error).toContain('email: Email is required');
+			expect(response.body.error).toEqual([
+				'email: Email is required',
+				'email: Email must be valid',
+			]);
 		});
 
 		it('should return HTTP 400 and a error message when password is empty', async () => {
@@ -76,7 +79,7 @@ describe('Auth Routes Integration Tests', () => {
 				400
 			);
 
-			expect(response.body.error).toContain('password: Password is required');
+			expect(response.body.error).toEqual(['password: Password is required']);
 		});
 		it('should return HTTP 401 and a error message when email is correct but password is incorrect', async () => {
 			const response: ResponseWithError = await callTestRoute(
@@ -108,7 +111,7 @@ describe('Auth Routes Integration Tests', () => {
 			expect(response.body.accessToken).toBeTruthy();
 
 			expect(cookieValue).toBeDefined();
-			expect(tokenArray).toContain(cookieValue);
+			expect(tokenArray).toEqual([cookieValue]);
 		});
 
 		it('should empty the refresh token array of previous values in user record if a cookie already exists in the request and the cookie is not present in the user refresh token array', async () => {
@@ -133,7 +136,7 @@ describe('Auth Routes Integration Tests', () => {
 			const tokenArray = await getTestUserTokenArray(testUser.email);
 
 			expect(cookieValue).toEqual(otherOldRefreshToken);
-			expect(tokenArray).not.toContain(oldRefreshToken);
+			expect(tokenArray).not.toEqual(oldRefreshToken);
 			vi.useRealTimers();
 		});
 	});
@@ -179,7 +182,7 @@ describe('Auth Routes Integration Tests', () => {
 
 			expect(cookies).toHaveLength(1);
 			expect(cookieValue).toEqual('');
-			expect(tokenArray).not.toContain(oldRefreshToken);
+			expect(tokenArray).not.toEqual(oldRefreshToken);
 		});
 	});
 
@@ -271,7 +274,7 @@ describe('Auth Routes Integration Tests', () => {
 			const accessToken = response.body.accessToken;
 
 			const tokenArray = await getTestUserTokenArray(testUser.email);
-			expect(tokenArray).toContain(newRefreshToken);
+			expect(tokenArray).toEqual([newRefreshToken]);
 
 			expect(clearedCookie).toEqual('');
 			expect(accessToken).toBeDefined();

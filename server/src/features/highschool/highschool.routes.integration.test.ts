@@ -107,7 +107,7 @@ describe('Highschool Routes Integration Tests', () => {
 			: await testApi.expect(status);
 
 		if (error) {
-			expect((response.body as ResponseWithError).error).toContain(error);
+			expect((response.body as ResponseWithError).error).toEqual([error]);
 		}
 
 		return response;
@@ -182,25 +182,23 @@ describe('Highschool Routes Integration Tests', () => {
 		});
 
 		it('should throw HTTP 400 and a message when the highschool id is not valid', async () => {
-			await callTestRoute(
-				'update',
-				'/api/highschool/random-id',
-				400,
-				authToken,
-				sampleHighschool,
-				'Valid id is required'
+			const response: ResponseWithError = await api
+				.patch('/api/highschool/random-id')
+				.auth(authToken, { type: 'bearer' })
+				.send(sampleHighschool)
+				.expect(400);
+			expect(response.body.error).toEqual(
+				'Valid id is required for highschool'
 			);
 		});
 
 		it('should throw HTTP 404 and a message when the highschool id is valid but does not exist', async () => {
-			await callTestRoute(
-				'update',
-				`/api/highschool/${sampleSUUID}`,
-				404,
-				authToken,
-				sampleHighschool,
-				'Highschool does not exist'
-			);
+			const response: ResponseWithError = await api
+				.patch(`/api/highschool/${sampleSUUID}`)
+				.auth(authToken, { type: 'bearer' })
+				.send(sampleHighschool)
+				.expect(404);
+			expect(response.body.error).toEqual('Highschool does not exist');
 		});
 
 		it.each(highschool400Errors)(
@@ -277,7 +275,9 @@ describe('Highschool Routes Integration Tests', () => {
 				.auth(authToken, { type: 'bearer' })
 				.expect(400);
 
-			expect(response.body.error).toEqual('Valid id is required');
+			expect(response.body.error).toEqual(
+				'Valid id is required for highschool'
+			);
 		});
 
 		it('should throw HTTP 404 and a message when the highschool id is valid but does not exist', async () => {

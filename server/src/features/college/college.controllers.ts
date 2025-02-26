@@ -22,7 +22,7 @@ export const updateCollege = async (
 	res: Response
 ) => {
 	const { id } = req.params;
-	validateSUUID(id);
+	validateSUUID(id, 'college');
 
 	const isCollege = await collegeExists({ id });
 	if (!isCollege) throw Error('College does not exist', { cause: 404 });
@@ -42,7 +42,7 @@ export const deleteCollege = async (
 	res: Response
 ) => {
 	const { id } = req.params;
-	validateSUUID(id);
+	validateSUUID(id, 'college');
 
 	const isCollege = await collegeExists({ id });
 	if (!isCollege) throw Error('College does not exist', { cause: 404 });

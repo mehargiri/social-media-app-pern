@@ -63,7 +63,7 @@ describe('College Controller Functions', () => {
 
 		it('should throw Error when the provided id in req.params is invalid', async () => {
 			await expect(callTestFn('random-id' as SUUID)).rejects.toThrowError(
-				Error('Valid id is required', { cause: 400 })
+				Error('Valid id is required for college', { cause: 400 })
 			);
 		});
 
@@ -97,7 +97,7 @@ describe('College Controller Functions', () => {
 
 		it('should throw Error when the provided id in req.params is invalid', async () => {
 			await expect(callTestFn('random-id' as SUUID)).rejects.toThrowError(
-				Error('Valid id is required', { cause: 400 })
+				Error('Valid id is required for college', { cause: 400 })
 			);
 		});
 

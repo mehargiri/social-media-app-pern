@@ -45,7 +45,12 @@ const comment400Errors: HTTPError400TestsType<CommentType>[] = [
 		{ content: 'A'.repeat(10001) },
 		'content: Content cannot be more than 10,000 characters',
 	],
-	['post id is empty', 'postId', { postId: '' }, 'postId: Post id is required'],
+	[
+		'post id is empty',
+		'postId',
+		{ postId: '' },
+		'postId: Post id is required; postId: Valid post id is required',
+	],
 	[
 		'post id is not valid',
 		'postId',
@@ -179,7 +184,7 @@ describe('Comment Routes Integration Tests', () => {
 				.auth(authToken, { type: 'bearer' })
 				.expect(400);
 
-			expect(response.body.error).toContain('Valid id is required for post');
+			expect(response.body.error).toEqual('Valid id is required for post');
 		});
 
 		it('should return total 5 comments with id, postId, content, likesCount, topLikeType1, topLikeType2, repliesCount, createdAt, updatedAt, user fullName, user profilePic along with a nextCursor value when a query params of postId is only passed. should return the next 5 comments that was created before the cursor value with id, postId, content, likesCount, topLikeType1, topLikeType2, repliesCount, createdAt, updatedAt, user fullName, user profilePic along with a nextCursor value when query params of postId and cursor is passed', async () => {
@@ -253,13 +258,18 @@ describe('Comment Routes Integration Tests', () => {
 		it.each(comment400Errors)(
 			'should return HTTP 400 when the comment %s',
 			async (_testDescription, property, obj, errMessage) => {
+				const errMessages = errMessage.split('; ');
 				const response: ResponseWithError = await api
 					.post(testUrlBase)
 					.auth(authToken, { type: 'bearer' })
-					.send({ ...testComments[0], [property]: obj[property] })
+					.send({
+						...testComments[0],
+						postId: testPostSUUID,
+						[property]: obj[property],
+					})
 					.expect(400);
 
-				expect(response.body.error).toContain(errMessage);
+				expect(response.body.error).toEqual([...errMessages]);
 			}
 		);
 
@@ -277,7 +287,7 @@ describe('Comment Routes Integration Tests', () => {
 				})
 				.expect(400);
 
-			expect(response.body.error).toContain(
+			expect(response.body.error).toEqual(
 				'Comment level has to be greater than 0 if parent comment id is present'
 			);
 		});
@@ -382,7 +392,7 @@ describe('Comment Routes Integration Tests', () => {
 				.send({ ...testComments[0], content: 'Test content' })
 				.expect(400);
 
-			expect(response.body.error).toContain('Valid id is required for comment');
+			expect(response.body.error).toEqual('Valid id is required for comment');
 		});
 
 		it('should return HTTP 404 and a message when the provided id is valid (SUUID) but does not exist', async () => {
@@ -392,7 +402,7 @@ describe('Comment Routes Integration Tests', () => {
 				.send({ ...testComments[0], content: 'Test content' })
 				.expect(404);
 
-			expect(response.body.error).toContain('Comment does not exist');
+			expect(response.body.error).toEqual('Comment does not exist');
 		});
 
 		// 400 Errors for comments
@@ -405,7 +415,7 @@ describe('Comment Routes Integration Tests', () => {
 					.send({ ...testComments[0], [property]: obj[property] })
 					.expect(400);
 
-				expect(response.body.error).toContain(errMessage);
+				expect(response.body.error).toEqual([errMessage]);
 			}
 		);
 
@@ -445,7 +455,7 @@ describe('Comment Routes Integration Tests', () => {
 				.auth(authToken, { type: 'bearer' })
 				.expect(400);
 
-			expect(response.body.error).toContain('Valid id is required for comment');
+			expect(response.body.error).toEqual('Valid id is required for comment');
 		});
 
 		it('should return HTTP 404 and a message when the provided id is valid (SUUID) but does not exist', async () => {
@@ -454,7 +464,7 @@ describe('Comment Routes Integration Tests', () => {
 				.auth(authToken, { type: 'bearer' })
 				.expect(404);
 
-			expect(response.body.error).toContain('Comment does not exist');
+			expect(response.body.error).toEqual('Comment does not exist');
 		});
 
 		it('should return a message saying comment deleted successfully when reply is deleted on success. Parent comment should have a reply count of 0', async () => {

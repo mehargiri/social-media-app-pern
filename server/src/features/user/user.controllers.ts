@@ -22,7 +22,7 @@ export const getMe = async (
 	res: Response<Awaited<ReturnType<typeof findUserById>>>
 ) => {
 	const { userId: id } = req;
-	validateSUUID(id);
+	validateSUUID(id, 'user');
 	const me = await findUserById({ id: id as SUUID });
 	if (!me) throw Error('User does not exist', { cause: 404 });
 	return void res.json(me);
@@ -33,7 +33,7 @@ export const getUser = async (
 	res: Response<Awaited<ReturnType<typeof findUserById>>>
 ) => {
 	const { id } = req.params;
-	validateSUUID(id);
+	validateSUUID(id, 'user');
 	const user = await findUserById({ id });
 	if (!user) throw Error('User does not exist', { cause: 404 });
 	return void res.json(user);
@@ -72,7 +72,7 @@ export const updateUser = async (
 	res: Response
 ) => {
 	const { id } = req.params;
-	validateSUUID(id);
+	validateSUUID(id, 'user');
 
 	// Later, multer will be replaced with CloudImage or Cloudinary
 	const attachedFiles = req.files as CustomUserFiles;
@@ -100,7 +100,7 @@ export const deleteUser = async (
 	res: Response
 ) => {
 	const { id } = req.params;
-	validateSUUID(id);
+	validateSUUID(id, 'user');
 
 	const user = await deleteUserById({ id });
 	if (!user) throw Error('User does not exist', { cause: 404 });

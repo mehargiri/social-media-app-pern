@@ -59,7 +59,7 @@ export const updatePost = async (
 	res: Response
 ) => {
 	const { id } = req.params;
-	validateSUUID(id);
+	validateSUUID(id, 'post');
 
 	const attachedFiles = req.files as Express.Multer.File[] | undefined;
 
@@ -84,7 +84,7 @@ export const deletePost = async (
 	res: Response
 ) => {
 	const { id } = req.params;
-	validateSUUID(id);
+	validateSUUID(id, 'post');
 
 	const isPost = await postExists({ id });
 	if (!isPost) throw Error('Post does not exist', { cause: 404 });

@@ -80,7 +80,12 @@ const createUserHTTP400Errors: HTTPError400TestsType<UserType>[] = [
 		{ lastName: 'A'.repeat(261) },
 		'lastName: Last Name cannot be more than 260 characters',
 	],
-	['email is empty', 'email', { email: '' }, 'email: Email is required'],
+	[
+		'email is empty',
+		'email',
+		{ email: '' },
+		'email: Email is required; email: Email must be valid',
+	],
 	[
 		'email is not valid',
 		'email',
@@ -91,13 +96,13 @@ const createUserHTTP400Errors: HTTPError400TestsType<UserType>[] = [
 		'password is empty',
 		'password',
 		{ password: '' },
-		'password: Password is required and must be minimum of 8 characters',
+		'password: Password is required and must be minimum of 8 characters; password: Stronger password is required. The password must have one uppercase, one lowercase, one number and one special character and no spaces',
 	],
 	[
 		'password is less than 8 characters',
 		'password',
 		{ password: 'A'.repeat(7) },
-		'password: Password is required and must be minimum of 8 characters',
+		'password: Password is required and must be minimum of 8 characters; password: Stronger password is required. The password must have one uppercase, one lowercase, one number and one special character and no spaces',
 	],
 	[
 		'password has no uppercase but length is more than 8 characters',
@@ -133,7 +138,7 @@ const createUserHTTP400Errors: HTTPError400TestsType<UserType>[] = [
 		'birthday is in the wrong format',
 		'birthday',
 		{ birthday: '20200101' },
-		'birthday: Birthday must be valid date in YYYY-MM-DD format',
+		'birthday: Birthday must be in YYYY-MM-DD format; birthday: Birthday must be valid date in YYYY-MM-DD format',
 	],
 	[
 		'birthday is not a valid date',
@@ -314,7 +319,7 @@ describe('User Routes Integration Tests', () => {
 				token: createAccessToken('random-id' as SUUID),
 			}).expect(400);
 
-			expect(response.body.error).toEqual('Valid id is required');
+			expect(response.body.error).toEqual('Valid id is required for user');
 		});
 
 		it('should return HTTP 404 and a message when the provided id is valid (SUUID) but user does not exist', async () => {
@@ -381,7 +386,7 @@ describe('User Routes Integration Tests', () => {
 				token: authToken,
 			}).expect(400);
 
-			expect(response.body.error).toEqual('Valid id is required');
+			expect(response.body.error).toEqual('Valid id is required for user');
 		});
 
 		it('should return HTTP 404 and a message when the provided id is valid (SUUID) but user does not exist', async () => {
@@ -498,13 +503,14 @@ describe('User Routes Integration Tests', () => {
 		it.each(createUserHTTP400Errors)(
 			'should return HTTP 400 and a message when %s',
 			async (_testDescription, property, obj, errMessage) => {
+				const errMessages = errMessage.split('; ');
 				const response: ResponseWithError = await performRequest({
 					method: 'post',
 					url: testUrl,
 					data: { ...tempUser, [property]: obj[property] },
 				});
 
-				expect(response.body.error).toContain(errMessage);
+				expect(response.body.error).toEqual([...errMessages]);
 			}
 		);
 
@@ -589,7 +595,7 @@ describe('User Routes Integration Tests', () => {
 				useField: true,
 			}).expect(400);
 
-			expect(response.body.error).toEqual('Valid id is required');
+			expect(response.body.error).toEqual('Valid id is required for user');
 		});
 
 		it('should return HTTP 404 and a message when the provided id is valid (SUUID) but user does not exist', async () => {
@@ -607,6 +613,7 @@ describe('User Routes Integration Tests', () => {
 		it.each(updateUserHTTP400Errors)(
 			'should return HTTP 400 and a message when %s',
 			async (_testDescription, property, obj, errMessage) => {
+				const errMessages = errMessage.split('; ');
 				const options: RequestOptions = {
 					method: 'patch',
 					url: testUrl,
@@ -624,7 +631,11 @@ describe('User Routes Integration Tests', () => {
 				const response: ResponseWithError = await performRequest(
 					options
 				).expect(400);
-				expect(response.body.error).toContain(errMessage);
+				expect(response.body.error).toEqual(
+					property === 'coverPic' || property === 'profilePic'
+						? errMessage
+						: [...errMessages]
+				);
 			}
 		);
 
@@ -697,7 +708,7 @@ describe('User Routes Integration Tests', () => {
 				token: authToken,
 			}).expect(400);
 
-			expect(response.body.error).toEqual('Valid id is required');
+			expect(response.body.error).toEqual('Valid id is required for user');
 		});
 
 		it('should return HTTP 404 and a message when the provided id is valid (SUUID) but user does not exist', async () => {

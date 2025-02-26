@@ -54,7 +54,7 @@ const post400Errors: HTTPError400TestsType<PostType>[] = [
 				'../../testAssets/blank-profile-picture-heic.heic'
 			),
 		},
-		'Invalid file type. Allowed: png and jpg/jpeg. Invalid file in asset',
+		'Invalid file type. Allowed: png and jpg/jpeg. Invalid file in assets',
 	],
 	[
 		'assets has an attached image that is too big',
@@ -329,7 +329,9 @@ describe('Post Routes Integration Tests', () => {
 				}
 
 				const response: ResponseWithError = await route.expect(400);
-				expect(response.body.error).toContain(errMessage);
+				expect(response.body.error).toEqual(
+					property === 'assets' ? errMessage : [errMessage]
+				);
 			}
 		);
 
@@ -380,7 +382,7 @@ describe('Post Routes Integration Tests', () => {
 				.field(testPost)
 				.expect(400);
 
-			expect(response.body.error).toEqual('Valid id is required');
+			expect(response.body.error).toEqual('Valid id is required for post');
 		});
 
 		it('should return HTTP 404 and a message when the provided id is valid (SUUID) but does not exist', async () => {
@@ -408,7 +410,9 @@ describe('Post Routes Integration Tests', () => {
 				}
 
 				const response: ResponseWithError = await route.expect(400);
-				expect(response.body.error).toContain(errMessage);
+				expect(response.body.error).toEqual(
+					property === 'assets' ? errMessage : [errMessage]
+				);
 			}
 		);
 
@@ -462,7 +466,7 @@ describe('Post Routes Integration Tests', () => {
 				.auth(authToken, { type: 'bearer' })
 				.expect(400);
 
-			expect(response.body.error).toEqual('Valid id is required');
+			expect(response.body.error).toEqual('Valid id is required for post');
 		});
 
 		it('should return HTTP 404 and a message when the provided id is valid (SUUID) but does not exist', async () => {

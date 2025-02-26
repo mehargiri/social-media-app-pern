@@ -107,7 +107,7 @@ describe('Reply Routes Integration Tests', () => {
 				.auth(authToken, { type: 'bearer' })
 				.expect(400);
 
-			expect(response.body.error).toContain(
+			expect(response.body.error).toEqual(
 				'Valid id is required for parent comment'
 			);
 		});
