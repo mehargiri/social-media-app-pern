@@ -1,10 +1,14 @@
 import { db } from '@/db/index.js';
-import { comment, user } from '@/db/schema/index.js';
+import { comment, post, user } from '@/db/schema/index.js';
 import {
 	CommentType,
 	UpdateCommentType,
 } from '@/features/comment/comment.zod.schemas.js';
-import { convertToSUUID, convertToUUID } from '@/utils/general.utils.js';
+import {
+	convertToSUUID,
+	convertToUUID,
+	TransactionType,
+} from '@/utils/general.utils.js';
 import { and, desc, eq, lt } from 'drizzle-orm';
 import { SUUID } from 'short-uuid';
 
@@ -90,18 +94,45 @@ export const findReplies = async (data: {
 };
 
 // Create Comment
-export const makeComment = async (data: CommentType & { userId: SUUID }) => {
-	const { userId, postId, parentCommentId, ...goodData } = data;
+export const makeComment = async (
+	data: CommentType & { userId: SUUID; forceError?: boolean }
+) => {
+	const { userId, postId, parentCommentId, forceError, ...goodData } = data;
 
-	const newComment = await db
-		.insert(comment)
-		.values({
-			...goodData,
-			userId: convertToUUID(userId),
-			postId: convertToUUID(postId),
-			parentCommentId: parentCommentId ? convertToUUID(parentCommentId) : null,
-		})
-		.returning({ id: comment.id });
+	const newComment = await db.transaction(async (tx) => {
+		const newComment = await tx
+			.insert(comment)
+			.values({
+				...goodData,
+				userId: convertToUUID(userId),
+				postId: convertToUUID(postId),
+				parentCommentId: parentCommentId
+					? convertToUUID(parentCommentId)
+					: null,
+			})
+			.returning({ id: comment.id });
+
+		if (forceError)
+			throw Error('Forced transaction error for comment creation', {
+				cause: 500,
+			});
+
+		await updatePostCommentCount({ id: postId, type: 'increase' }, tx);
+
+		// Reply is created if parentCommentId is present
+		// Otherwise top level comment is created
+		if (parentCommentId) {
+			await updateParentCommentReplyCount(
+				{
+					id: parentCommentId,
+					type: 'increase',
+				},
+				tx
+			);
+		}
+
+		return newComment;
+	});
 
 	const newCommentWithSUUID = newComment.map((comment) => ({
 		...comment,
@@ -136,17 +167,41 @@ export const updateCommentById = async (
 };
 
 // Delete Comment
-export const deleteCommentById = async (data: { id: SUUID; userId: SUUID }) => {
-	const { id, userId } = data;
-	const deletedComment = await db
-		.delete(comment)
-		.where(
-			and(
-				eq(comment.id, convertToUUID(id)),
-				eq(comment.userId, convertToUUID(userId))
+export const deleteCommentById = async (data: {
+	id: SUUID;
+	userId: SUUID;
+	postId: SUUID;
+	parentCommentId?: SUUID;
+	forceError?: boolean;
+}) => {
+	const { id, userId, postId, parentCommentId, forceError } = data;
+
+	const deletedComment = await db.transaction(async (tx) => {
+		const deletedComment = await tx
+			.delete(comment)
+			.where(
+				and(
+					eq(comment.id, convertToUUID(id)),
+					eq(comment.userId, convertToUUID(userId))
+				)
 			)
-		)
-		.returning({ id: comment.id });
+			.returning({ id: comment.id });
+
+		if (forceError)
+			throw Error('Forced transaction error for comment deletion', {
+				cause: 500,
+			});
+
+		await updatePostCommentCount({ id: postId, type: 'decrease' }, tx);
+
+		if (parentCommentId)
+			await updateParentCommentReplyCount(
+				{ id: parentCommentId, type: 'decrease' },
+				tx
+			);
+
+		return deletedComment;
+	});
 
 	const deletedCommentWithSUUID = deletedComment.map((comment) => ({
 		...comment,
@@ -159,7 +214,7 @@ export const deleteCommentById = async (data: { id: SUUID; userId: SUUID }) => {
 export const commentExists = async (data: { id: SUUID }) => {
 	const isComment = await db
 		.select({
-			content: comment.content,
+			postId: comment.postId,
 			parentCommentId: comment.parentCommentId,
 		})
 		.from(comment)
@@ -167,22 +222,31 @@ export const commentExists = async (data: { id: SUUID }) => {
 
 	const [isCommentWithSUUID] = isComment.map((comment) => ({
 		...comment,
+		postId: convertToSUUID(comment.postId),
 		parentCommentId: comment.parentCommentId
 			? convertToSUUID(comment.parentCommentId)
-			: null,
+			: undefined,
 	}));
 	return isCommentWithSUUID;
 };
 
-export const updateParentCommentReplyCount = async (data: {
-	id: SUUID;
-	type: 'increase' | 'decrease';
-}) => {
+export const updateParentCommentReplyCount = async (
+	data: {
+		id: SUUID;
+		type: 'increase' | 'decrease';
+	},
+	txDb: TransactionType
+) => {
 	const { id, type } = data;
-	const currentParentCommentReplyCount = await getCommentRepliesCount({ id });
+	const currentParentCommentReplyCount = await getParentCommentReplyCount(
+		{
+			id,
+		},
+		txDb
+	);
 
 	if (currentParentCommentReplyCount) {
-		await db
+		await txDb
 			.update(comment)
 			.set({
 				repliesCount:
@@ -194,12 +258,55 @@ export const updateParentCommentReplyCount = async (data: {
 	}
 };
 
-export const getCommentRepliesCount = async (data: { id: SUUID }) => {
+export const getParentCommentReplyCount = async (
+	data: { id: SUUID },
+	txDb?: TransactionType
+) => {
 	const { id } = data;
-	const [selectedComment] = await db
+	const [selectedComment] = await (txDb ?? db)
 		.select({ repliesCount: comment.repliesCount })
 		.from(comment)
 		.where(eq(comment.id, convertToUUID(id)));
 
 	return selectedComment;
+};
+
+export const updatePostCommentCount = async (
+	data: {
+		id: SUUID;
+		type: 'increase' | 'decrease';
+	},
+	txDb: TransactionType
+) => {
+	const { id, type } = data;
+	const currentPostCommentCount = await getPostCommentsCount({ id }, txDb);
+
+	if (currentPostCommentCount) {
+		await txDb
+			.update(post)
+			.set({
+				commentsCount:
+					type === 'increase'
+						? currentPostCommentCount.commentsCount + 1
+						: currentPostCommentCount.commentsCount - 1,
+			})
+			.where(eq(post.id, convertToUUID(id)));
+	}
+};
+
+export const getPostCommentsCount = async (
+	data: { id: SUUID },
+	txDb?: TransactionType
+) => {
+	const { id } = data;
+	const idWithUUID = convertToUUID(id);
+
+	const [selectedPost] = await (txDb ?? db)
+		.select({
+			commentsCount: post.commentsCount,
+		})
+		.from(post)
+		.where(eq(post.id, idWithUUID));
+
+	return selectedPost;
 };

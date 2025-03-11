@@ -8,7 +8,6 @@ import {
 	findReplies,
 	makeComment,
 	updateCommentById,
-	updateParentCommentReplyCount,
 } from './comment.services.js';
 import { CommentType, UpdateCommentType } from './comment.zod.schemas.js';
 
@@ -75,7 +74,7 @@ export const getReplies = async (
 
 // Create Comment
 export const createComment = async (
-	req: Request<never, never, CommentType>,
+	req: Request<never, never, CommentType & { forceError?: boolean }>,
 	res: Response
 ) => {
 	const { parentCommentId, commentLevel, ...goodData } = req.body;
@@ -92,16 +91,6 @@ export const createComment = async (
 		commentLevel,
 		userId: req.userId as SUUID,
 	});
-
-	// Reply is created if parentCommentId is present
-	// Otherwise top level comment is created
-	if (parentCommentId) {
-		// Need to update the replies count of the parent comment
-		await updateParentCommentReplyCount({
-			id: parentCommentId,
-			type: 'increase',
-		});
-	}
 
 	return void res.sendStatus(201);
 };
@@ -129,7 +118,7 @@ export const updateComment = async (
 
 // Delete Comment
 export const deleteComment = async (
-	req: Request<{ id: SUUID }>,
+	req: Request<{ id: SUUID }, never, never, { forceError?: boolean }>,
 	res: Response
 ) => {
 	const { id } = req.params;
@@ -138,14 +127,13 @@ export const deleteComment = async (
 	const isComment = await commentExists({ id });
 	if (!isComment) throw Error('Comment does not exist', { cause: 404 });
 
-	await deleteCommentById({ id, userId: req.userId as SUUID });
-
-	if (isComment.parentCommentId) {
-		await updateParentCommentReplyCount({
-			id: isComment.parentCommentId,
-			type: 'decrease',
-		});
-	}
+	await deleteCommentById({
+		id,
+		userId: req.userId as SUUID,
+		postId: isComment.postId,
+		parentCommentId: isComment.parentCommentId,
+		forceError: req.query.forceError,
+	});
 
 	return void res.json({ message: 'Comment deleted successfully' });
 };

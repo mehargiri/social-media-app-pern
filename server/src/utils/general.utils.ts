@@ -1,8 +1,14 @@
+import { db } from '@/db/index.js';
 import { Request } from 'express';
 import { mkdirSync } from 'fs';
 import multer, { FileFilterCallback, MulterError } from 'multer';
 import path from 'path';
 import short, { SUUID } from 'short-uuid';
+
+// This custom type is for the transaction database context present inside Drizzle's db.transaction function
+export type TransactionType = Parameters<
+	Parameters<typeof db.transaction>[0]
+>[0];
 
 // UUID Conversions
 const translator = short();

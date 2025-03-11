@@ -94,6 +94,10 @@ CREATE TABLE "post" (
 	"user_id" uuid NOT NULL,
 	"content" text NOT NULL,
 	"assets" text[],
+	"top_like_type1" "like_type",
+	"top_like_type2" "like_type",
+	"comments_count" integer DEFAULT 0 NOT NULL,
+	"likes_count" integer DEFAULT 0 NOT NULL,
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
 	"updated_at" timestamp with time zone DEFAULT now() NOT NULL
 );
