@@ -7,6 +7,7 @@ import {
 	createTestComment,
 	createTestPost,
 	createTestReply,
+	createTestUser,
 	ExtractResponseBody,
 	HTTPError400TestsType,
 	ResponseWithError,
@@ -28,7 +29,15 @@ const testReplyLevel2 = createTestReply({ commentLevel: 2 });
 // eslint-disable-next-line @typescript-eslint/no-misused-promises
 const api = supertest(app);
 const testPost = createTestPost();
+const otherTestPost = createTestPost();
+const otherTestUser = createTestUser();
+otherTestUser.email = 'sample@email.com';
+
 const testComments = Array.from({ length: 10 }).map(() => ({
+	...createTestComment(),
+}));
+
+const otherTestComments = Array.from({ length: 10 }).map(() => ({
 	...createTestComment(),
 }));
 
@@ -150,10 +159,34 @@ describe('Comment Routes Integration Tests', () => {
 	});
 
 	describe('GET comments route', () => {
-		let testUrl: string;
+		let testUrl: string, otherTestPostSUUID: SUUID;
 
-		beforeAll(() => {
+		beforeAll(async () => {
 			testUrl = `${testUrlBase}?postId=${testPostSUUID}`;
+
+			const [otherTestUserId] = await db
+				.insert(user)
+				.values(otherTestUser)
+				.returning({ id: user.id });
+
+			const [otherTestPostId] = await db
+				.insert(post)
+				.values({ ...otherTestPost, userId: otherTestUserId?.id ?? '' })
+				.returning({ id: post.id });
+
+			otherTestPostSUUID = convertToSUUID(otherTestPostId?.id ?? '');
+
+			otherTestComments.forEach((comment) => {
+				comment.userId = otherTestUserId?.id ?? '';
+				comment.postId = (otherTestPostId?.id ?? '') as unknown as SUUID;
+			});
+
+			vi.useFakeTimers({ shouldAdvanceTime: true });
+			await db.insert(comment).values(otherTestComments.slice(0, 5));
+
+			vi.advanceTimersByTime(2 * 60 * 1000);
+			await db.insert(comment).values(otherTestComments.slice(5));
+			vi.useRealTimers();
 		});
 
 		type getCommentsResponse = SuperTestResponse<
@@ -182,7 +215,8 @@ describe('Comment Routes Integration Tests', () => {
 			expect(response.body.error).toContain('Valid id is required for post');
 		});
 
-		it('should return total 5 comments with id, postId, content, likesCount, topLikeType1, topLikeType2, repliesCount, createdAt, updatedAt, user fullName, user profilePic along with a nextCursor value when a query params of postId is only passed. should return the next 5 comments that was created before the cursor value with id, postId, content, likesCount, topLikeType1, topLikeType2, repliesCount, createdAt, updatedAt, user fullName, user profilePic along with a nextCursor value when query params of postId and cursor is passed', async () => {
+		it('should return total 5 comments with id, postId, content, likesCount, topLikeType1, topLikeType2, repliesCount, createdAt, updatedAt, user fullName, user profilePic along with a nextCursor value when a query params of postId is only passed. should return the next 5 comments that was created before the cursor value with id, postId, content, likesCount, topLikeType1, topLikeType2, repliesCount, createdAt, updatedAt, user fullName, user profilePic along with a nextCursor value when query params of postId and cursor is passed. should return comments that belong to a single post. should return only the top level comments', async () => {
+			vi.stubEnv('NODE_ENV', 'test');
 			const requiredPropsComment = [
 				'id',
 				'postId',
@@ -211,6 +245,11 @@ describe('Comment Routes Integration Tests', () => {
 				expect(response.body.comments[0]).toHaveProperty(prop);
 			});
 
+			response.body.comments.forEach((comment) => {
+				expect(comment.postId).not.toEqual(otherTestPostSUUID);
+				expect(comment.commentLevel).toEqual(0);
+			});
+
 			const cursorResponse: getCommentsResponse = await api
 				.get(`${testUrl}&cursor=${cursor}`)
 				.auth(authToken, { type: 'bearer' })
@@ -229,6 +268,13 @@ describe('Comment Routes Integration Tests', () => {
 			requiredPropsComment.forEach((prop) => {
 				expect(cursorResponse.body.comments[0]).toHaveProperty(prop);
 			});
+
+			cursorResponse.body.comments.forEach((comment) => {
+				expect(comment.postId).not.toEqual(otherTestPostSUUID);
+				expect(comment.commentLevel).toEqual(0);
+			});
+
+			vi.unstubAllEnvs();
 		});
 	});
 

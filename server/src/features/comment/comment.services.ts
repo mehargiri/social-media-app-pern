@@ -1,5 +1,6 @@
 import { db } from '@/db/index.js';
 import { comment, user } from '@/db/schema/index.js';
+import env from '@/env.js';
 import {
 	CommentType,
 	UpdateCommentType,
@@ -13,10 +14,13 @@ export const findComments = async (data: {
 	postId: SUUID;
 	cursor?: string;
 }) => {
-	const { cursor } = data;
+	const { postId, cursor } = data;
+	const isTest = env.NODE_ENV === 'test';
+
 	const comments = await db
 		.select({
 			id: comment.id,
+			...(isTest ? { commentLevel: comment.commentLevel } : {}),
 			postId: comment.postId,
 			content: comment.content,
 			likesCount: comment.likesCount,
@@ -30,7 +34,13 @@ export const findComments = async (data: {
 		})
 		.from(comment)
 		.leftJoin(user, eq(comment.userId, user.id))
-		.where(cursor ? lt(comment.createdAt, new Date(cursor)) : undefined)
+		.where(
+			and(
+				eq(comment.postId, convertToUUID(postId)),
+				eq(comment.commentLevel, 0),
+				cursor ? lt(comment.createdAt, new Date(cursor)) : undefined
+			)
+		)
 		.orderBy(desc(comment.createdAt))
 		.limit(5);
 
