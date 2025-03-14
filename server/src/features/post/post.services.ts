@@ -13,6 +13,7 @@ export const findPosts = async (data: { cursor?: string; userId?: SUUID }) => {
 		.select({
 			fullName: user.fullName,
 			profilePic: user.profilePic,
+			userId: user.id,
 			id: post.id,
 			content: post.content,
 			postAssets: post.assets,
@@ -33,6 +34,9 @@ export const findPosts = async (data: { cursor?: string; userId?: SUUID }) => {
 	const postsWithSUUID = posts.map((post) => ({
 		...post,
 		id: convertToSUUID(post.id),
+		...(post.userId && { userId: convertToSUUID(post.userId) }),
+		...(post.userId && { fullName: post.fullName }),
+		...(post.userId && { profilePic: post.profilePic }),
 	}));
 
 	return postsWithSUUID;

@@ -140,6 +140,7 @@ describe('Post Routes Integration Tests', () => {
 			'fullName',
 			'postCreatedAt',
 			'postUpdatedAt',
+			'userId',
 		];
 
 		it('should return HTTP 401 when the route is accessed without login', async () => {
