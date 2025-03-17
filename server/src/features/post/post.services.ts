@@ -19,6 +19,10 @@ export const findPosts = async (data: { cursor?: string; userId?: SUUID }) => {
 			postAssets: post.assets,
 			postCreatedAt: post.createdAt,
 			postUpdatedAt: post.updatedAt,
+			likesCount: post.likesCount,
+			topLikeType1: post.topLikeType1,
+			topLikeType2: post.topLikeType2,
+			commentsCount: post.commentsCount,
 		})
 		.from(post)
 		.leftJoin(user, eq(post.userId, user.id))
@@ -40,6 +44,39 @@ export const findPosts = async (data: { cursor?: string; userId?: SUUID }) => {
 	}));
 
 	return postsWithSUUID;
+};
+
+export const findPost = async (data: { postId: SUUID }) => {
+	const { postId } = data;
+
+	const singlePost = await db
+		.select({
+			fullName: user.fullName,
+			profilePic: user.profilePic,
+			userId: user.id,
+			id: post.id,
+			content: post.content,
+			postAssets: post.assets,
+			postCreatedAt: post.createdAt,
+			postUpdatedAt: post.updatedAt,
+			likesCount: post.likesCount,
+			topLikeType1: post.topLikeType1,
+			topLikeType2: post.topLikeType2,
+			commentsCount: post.commentsCount,
+		})
+		.from(post)
+		.leftJoin(user, eq(post.userId, user.id))
+		.where(eq(post.userId, convertToUUID(postId)));
+
+	const postWithSUUID = singlePost.map((post) => ({
+		...post,
+		id: convertToSUUID(post.id),
+		...(post.userId && { userId: convertToSUUID(post.userId) }),
+		...(post.userId && { fullName: post.fullName }),
+		...(post.userId && { profilePic: post.profilePic }),
+	}));
+
+	return postWithSUUID;
 };
 
 // Create Posts
