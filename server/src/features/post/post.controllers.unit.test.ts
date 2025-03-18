@@ -5,11 +5,13 @@ import { describe, expect, it, Mock, vi } from 'vitest';
 import {
 	createPost,
 	deletePost,
+	getPost,
 	getPosts,
 	updatePost,
 } from './post.controllers.js';
 import {
 	deletePostById,
+	findPost,
 	findPosts,
 	makePost,
 	postExists,
@@ -45,6 +47,7 @@ describe('Post Controller Functions', () => {
 		updatePostById: vi.fn(),
 		deletePostById: vi.fn(),
 		findPosts: vi.fn(),
+		findPost: vi.fn(),
 	}));
 
 	describe('getPosts function', () => {
@@ -65,6 +68,20 @@ describe('Post Controller Functions', () => {
 
 			expect(nextCursor).not.toBeNull();
 			expect(res.json).toHaveBeenCalledWith({ posts: testPosts, nextCursor });
+		});
+	});
+
+	describe('getPost function', () => {
+		it('should call res.json with a single post on success', async () => {
+			(findPost as Mock).mockResolvedValue(testPosts[0]);
+			await getPost(
+				req as Request<{ id: SUUID }>,
+				res as unknown as Response<{
+					post: Awaited<ReturnType<typeof findPost>>;
+				}>
+			);
+
+			expect(res.json).toHaveBeenCalledWith({ post: testPosts[0] });
 		});
 	});
 
@@ -127,7 +144,7 @@ describe('Post Controller Functions', () => {
 
 		it('should throw Error when post with given id in request params does not exist', async () => {
 			await expect(callTestFn('random-id' as SUUID)).rejects.toThrowError(
-				Error('Valid id is required', { cause: 400 })
+				Error('Valid id is required for post', { cause: 400 })
 			);
 		});
 

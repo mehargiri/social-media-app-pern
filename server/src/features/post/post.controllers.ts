@@ -3,6 +3,7 @@ import { Request, Response } from 'express';
 import { SUUID } from 'short-uuid';
 import {
 	deletePostById,
+	findPost,
 	findPosts,
 	makePost,
 	postExists,
@@ -25,6 +26,8 @@ export const getPosts = async (
 
 	const userId = user === 'me' ? (req.userId as SUUID) : user;
 
+	if (userId) validateSUUID(userId, 'user');
+
 	const totalPosts = await findPosts({ cursor: decodedCursor, userId });
 
 	const lastPostDate =
@@ -35,6 +38,16 @@ export const getPosts = async (
 		: null;
 
 	return void res.json({ posts: totalPosts, nextCursor });
+};
+
+export const getPost = async (
+	req: Request<{ id: SUUID }>,
+	res: Response<{ post: Awaited<ReturnType<typeof findPost>> }>
+) => {
+	const { id } = req.params;
+	validateSUUID(id, 'post');
+	const singlePost = await findPost({ postId: id });
+	return void res.json({ post: singlePost });
 };
 
 export const createPost = async (
