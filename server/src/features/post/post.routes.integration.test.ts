@@ -26,7 +26,7 @@ import {
 	it,
 	vi,
 } from 'vitest';
-import { getPosts } from './post.controllers.js';
+import { getPost, getPosts } from './post.controllers.js';
 import { PostType } from './post.zod.schemas.js';
 
 // eslint-disable-next-line @typescript-eslint/no-misused-promises
@@ -289,6 +289,63 @@ describe('Post Routes Integration Tests', () => {
 
 			expect(cursorResponseAgain.body.nextCursor).toBeNull();
 			expect(cursorResponseAgain.body.posts).toHaveLength(0);
+		});
+	});
+
+	describe('GET post route', () => {
+		let testUrl: string;
+
+		beforeAll(() => {
+			testUrl = `/api/posts/${convertToSUUID(testPostsId[0]?.id ?? '')}`;
+		});
+
+		type getPostResponse = SuperTestResponse<
+			ExtractResponseBody<Parameters<typeof getPost>['1']>
+		>;
+
+		const requiredPropsPost = [
+			'content',
+			'postAssets',
+			'profilePic',
+			'fullName',
+			'postCreatedAt',
+			'postUpdatedAt',
+			'userId',
+		];
+
+		it('should return HTTP 401 when the route is accessed without login', async () => {
+			await api.get(testUrl).expect(401);
+		});
+
+		it('should return HTTP 403 when the route is accessed with an expired token', async () => {
+			vi.useFakeTimers({ shouldAdvanceTime: true });
+			vi.advanceTimersByTime(2 * 60 * 1000);
+
+			await api.get(testUrl).auth(authToken, { type: 'bearer' }).expect(403);
+
+			vi.useRealTimers();
+		});
+
+		it('should return HTTP 400 and a message when the provided id is invalid (not SUUID)', async () => {
+			const response: ResponseWithError = await api
+				.get(`/api/posts/random-id`)
+				.auth(authToken, { type: 'bearer' })
+				.expect(400);
+
+			expect(response.body.error).toEqual('Valid id is required for post');
+		});
+
+		it('should return a single post with userId, content, postAssets, user profilePic, user fullName, postCreatedAt date, and postUpdatedAt date when the post id is passed', async () => {
+			const response: getPostResponse = await api
+				.get(testUrl)
+				.auth(authToken, { type: 'bearer' })
+				.expect(200);
+
+			expect(response.body.post[0]).not.toBeNull();
+
+			requiredPropsPost.forEach((prop) => {
+				expect(response.body.post[0]).toHaveProperty(prop);
+			});
 		});
 	});
 

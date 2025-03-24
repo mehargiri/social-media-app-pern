@@ -66,7 +66,7 @@ export const findPost = async (data: { postId: SUUID }) => {
 		})
 		.from(post)
 		.leftJoin(user, eq(post.userId, user.id))
-		.where(eq(post.userId, convertToUUID(postId)));
+		.where(eq(post.id, convertToUUID(postId)));
 
 	const postWithSUUID = singlePost.map((post) => ({
 		...post,

@@ -6,6 +6,7 @@ import multer from 'multer';
 import {
 	createPost,
 	deletePost,
+	getPost,
 	getPosts,
 	updatePost,
 } from './post.controllers.js';
@@ -20,6 +21,7 @@ const upload = multer({
 });
 
 router.get('/', tokenHandler, getPosts);
+router.get('/:id', tokenHandler, getPost);
 router.post(
 	'/',
 	[tokenHandler, upload.array('assets', 3), validateData(createPostSchema)],
