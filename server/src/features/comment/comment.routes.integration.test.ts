@@ -229,6 +229,7 @@ describe('Comment Routes Integration Tests', () => {
 				'updatedAt',
 				'profilePic',
 				'fullName',
+				'userId',
 			];
 
 			const response: getCommentsResponse = await api

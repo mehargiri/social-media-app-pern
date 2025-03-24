@@ -31,6 +31,7 @@ export const findComments = async (data: {
 			updatedAt: comment.updatedAt,
 			fullName: user.fullName,
 			profilePic: user.profilePic,
+			userId: user.id,
 		})
 		.from(comment)
 		.leftJoin(user, eq(comment.userId, user.id))
@@ -48,6 +49,9 @@ export const findComments = async (data: {
 		...comment,
 		id: convertToSUUID(comment.id),
 		postId: convertToSUUID(comment.postId),
+		...(comment.userId && { userId: convertToSUUID(comment.userId) }),
+		...(comment.userId && { fullName: comment.fullName }),
+		...(comment.userId && { profilePic: comment.profilePic }),
 	}));
 
 	return commentsWithSUUID;
@@ -74,6 +78,7 @@ export const findReplies = async (data: {
 			commentLevel: comment.commentLevel,
 			fullName: user.fullName,
 			profilePic: user.profilePic,
+			userId: user.id,
 		})
 		.from(comment)
 		.leftJoin(user, eq(comment.userId, user.id))
@@ -91,9 +96,12 @@ export const findReplies = async (data: {
 		...reply,
 		id: convertToSUUID(reply.id),
 		postId: convertToSUUID(reply.postId),
-		...(reply.parentCommentId
-			? { parentCommentId: convertToSUUID(reply.parentCommentId) }
-			: {}),
+		...(reply.userId && { userId: convertToSUUID(reply.userId) }),
+		...(reply.userId && { fullName: reply.fullName }),
+		...(reply.userId && { profilePic: reply.profilePic }),
+		...(reply.parentCommentId && {
+			parentCommentId: convertToSUUID(reply.parentCommentId),
+		}),
 	}));
 
 	return repliesWithSUUID;
