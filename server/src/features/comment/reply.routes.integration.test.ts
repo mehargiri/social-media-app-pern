@@ -129,6 +129,7 @@ describe('Reply Routes Integration Tests', () => {
 				'updatedAt',
 				'profilePic',
 				'fullName',
+				'userId',
 			];
 
 			const response: getRepliesResponse = await api
