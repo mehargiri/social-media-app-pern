@@ -1,5 +1,6 @@
 import { db } from '@/db/index.js';
 import { comment, post, user } from '@/db/schema/index.js';
+import env from '@/env.js';
 import {
 	CommentType,
 	UpdateCommentType,
@@ -17,10 +18,13 @@ export const findComments = async (data: {
 	postId: SUUID;
 	cursor?: string;
 }) => {
-	const { cursor } = data;
+	const { postId, cursor } = data;
+	const isTest = env.NODE_ENV === 'test';
+
 	const comments = await db
 		.select({
 			id: comment.id,
+			...(isTest ? { commentLevel: comment.commentLevel } : {}),
 			postId: comment.postId,
 			content: comment.content,
 			likesCount: comment.likesCount,
@@ -31,10 +35,17 @@ export const findComments = async (data: {
 			updatedAt: comment.updatedAt,
 			fullName: user.fullName,
 			profilePic: user.profilePic,
+			userId: user.id,
 		})
 		.from(comment)
 		.leftJoin(user, eq(comment.userId, user.id))
-		.where(cursor ? lt(comment.createdAt, new Date(cursor)) : undefined)
+		.where(
+			and(
+				eq(comment.postId, convertToUUID(postId)),
+				eq(comment.commentLevel, 0),
+				cursor ? lt(comment.createdAt, new Date(cursor)) : undefined
+			)
+		)
 		.orderBy(desc(comment.createdAt))
 		.limit(5);
 
@@ -42,6 +53,9 @@ export const findComments = async (data: {
 		...comment,
 		id: convertToSUUID(comment.id),
 		postId: convertToSUUID(comment.postId),
+		...(comment.userId && { userId: convertToSUUID(comment.userId) }),
+		...(comment.userId && { fullName: comment.fullName }),
+		...(comment.userId && { profilePic: comment.profilePic }),
 	}));
 
 	return commentsWithSUUID;
@@ -68,6 +82,7 @@ export const findReplies = async (data: {
 			commentLevel: comment.commentLevel,
 			fullName: user.fullName,
 			profilePic: user.profilePic,
+			userId: user.id,
 		})
 		.from(comment)
 		.leftJoin(user, eq(comment.userId, user.id))
@@ -85,9 +100,12 @@ export const findReplies = async (data: {
 		...reply,
 		id: convertToSUUID(reply.id),
 		postId: convertToSUUID(reply.postId),
-		...(reply.parentCommentId
-			? { parentCommentId: convertToSUUID(reply.parentCommentId) }
-			: {}),
+		...(reply.userId && { userId: convertToSUUID(reply.userId) }),
+		...(reply.userId && { fullName: reply.fullName }),
+		...(reply.userId && { profilePic: reply.profilePic }),
+		...(reply.parentCommentId && {
+			parentCommentId: convertToSUUID(reply.parentCommentId),
+		}),
 	}));
 
 	return repliesWithSUUID;
