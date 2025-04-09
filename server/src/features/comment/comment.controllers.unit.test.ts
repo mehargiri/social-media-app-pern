@@ -228,7 +228,7 @@ describe('Comment Controller Functions', () => {
 			req.params.id = id;
 			if (parentCommentId) req.query.parentCommentId = parentCommentId;
 			await deleteComment(
-				req as unknown as Request<{ id: SUUID }>,
+				req as unknown as Request<{ id: SUUID }, never, never>,
 				res as unknown as Response
 			);
 		};
