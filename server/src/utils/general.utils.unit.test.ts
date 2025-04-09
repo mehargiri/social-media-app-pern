@@ -31,13 +31,14 @@ describe('General Utils Functions', () => {
 		describe('validateSUUID', () => {
 			it('should accept a valid SUUID', () => {
 				expect(() => {
-					validateSUUID(testSUUID);
+					validateSUUID(testSUUID, '');
 				}).not.toThrow();
 			});
+
 			it('should throw Error for invalid SUUID', () => {
 				expect(() => {
-					validateSUUID('hello');
-				}).toThrow(Error('Valid id is required', { cause: 400 }));
+					validateSUUID('hello', 'function');
+				}).toThrow(Error('Valid id is required for function', { cause: 400 }));
 			});
 		});
 
