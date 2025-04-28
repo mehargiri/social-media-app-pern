@@ -9,17 +9,23 @@ import { and, count, desc, eq, lt } from 'drizzle-orm';
 import { SUUID } from 'short-uuid';
 import { LikeType } from './like.zod.schemas.js';
 
+export type EntityType = 'post' | 'comment';
+
+const getEntityCondition = (entity: EntityType, id: SUUID) => {
+	return eq(
+		entity === 'post' ? like.postId : like.commentId,
+		convertToUUID(id)
+	);
+};
+
 // Get likes
-export const getDetailedLikes = async (data: {
-	id: SUUID;
-	entity: 'post' | 'comment';
+export const findDetailedLikes = async (data: {
+	id?: SUUID;
+	entity?: EntityType;
 	cursor?: string;
 }) => {
 	const { id, entity, cursor } = data;
-	const entityCondition =
-		entity === 'post'
-			? eq(like.postId, convertToUUID(id))
-			: eq(like.commentId, convertToUUID(id));
+	if (!entity || !id) return;
 
 	const detailedLikes = await db
 		.select({
@@ -29,12 +35,13 @@ export const getDetailedLikes = async (data: {
 			fullName: user.fullName,
 			profilePic: user.profilePic,
 			userId: like.userId,
+			createdAt: like.createdAt,
 		})
 		.from(like)
 		.leftJoin(user, eq(like.userId, user.id))
 		.where(
 			and(
-				entityCondition,
+				getEntityCondition(entity, id),
 				cursor ? lt(like.createdAt, new Date(cursor)) : undefined
 			)
 		)
@@ -54,12 +61,14 @@ export const getDetailedLikes = async (data: {
 // Create likes
 export const makeLike = async (
 	data: Omit<LikeType, 'postId' | 'commentId'> & {
-		id: SUUID;
-		entity: 'post' | 'comment';
+		userId: SUUID;
+		id?: SUUID;
+		entity?: EntityType;
 		forceError?: boolean;
 	}
 ) => {
 	const { id, userId, entity, forceError, ...goodData } = data;
+	if (!id || !entity) return;
 
 	const newLike = await db.transaction(async (tx) => {
 		const newLike = await tx
@@ -73,13 +82,17 @@ export const makeLike = async (
 			.returning({ id: like.id });
 
 		if (forceError)
-			throw Error('Forced transaction error for like creation', { cause: 500 });
+			throw Error('Forced transaction error for like creation', {
+				cause: 500,
+			});
 
-		// Update total likes count of entity
-		await updateEntityLikeCount({ id, entity, type: 'increase' }, tx);
+		await Promise.all([
+			// Update total likes count of entity
+			updateEntityLikeCount({ id, entity, type: 'increase' }, tx),
 
-		// Update top likes type of entity
-		await updateEntityTopLikes({ id, entity }, tx);
+			// Update top likes type of entity
+			updateEntityTopLikes({ id, entity }, tx),
+		]);
 
 		return newLike;
 	});
@@ -89,27 +102,30 @@ export const makeLike = async (
 		id: convertToSUUID(like.id),
 	}));
 
-	return newLikeWithSUUID[0];
+	return newLikeWithSUUID.at(0);
 };
 
 // Update Likes
 export const updateLikeById = async (
 	data: Omit<LikeType, 'postId' | 'commentId'> & {
-		id: SUUID;
-		entity: 'post' | 'comment';
+		userId: SUUID;
+		id?: SUUID;
+		entity?: EntityType;
 	}
 ) => {
 	const { id, entity, userId, ...goodData } = data;
-	const entityCondition =
-		entity === 'post'
-			? eq(like.postId, convertToUUID(id))
-			: eq(like.commentId, convertToUUID(id));
+	if (!entity || !id) return;
 
 	const updatedLike = await db.transaction(async (tx) => {
 		const updatedLike = await tx
 			.update(like)
 			.set(goodData)
-			.where(and(eq(like.userId, convertToUUID(userId)), entityCondition))
+			.where(
+				and(
+					eq(like.userId, convertToUUID(userId)),
+					getEntityCondition(entity, id)
+				)
+			)
 			.returning({ id: like.id });
 
 		// Update top likes type of entity
@@ -127,31 +143,36 @@ export const updateLikeById = async (
 
 // Delete likes
 export const deleteLikeById = async (data: {
-	id: SUUID;
 	userId: SUUID;
-	entity: 'post' | 'comment';
+	id?: SUUID;
+	entity?: EntityType;
 	forceError?: boolean;
 }) => {
 	const { id, userId, entity, forceError } = data;
-	const entityCondition =
-		entity === 'post'
-			? eq(like.postId, convertToUUID(id))
-			: eq(like.commentId, convertToUUID(id));
+	if (!entity || !id) return;
 
 	const deletedLike = await db.transaction(async (tx) => {
 		const deletedLike = await tx
 			.delete(like)
-			.where(and(eq(like.userId, convertToUUID(userId)), entityCondition))
+			.where(
+				and(
+					eq(like.userId, convertToUUID(userId)),
+					getEntityCondition(entity, id)
+				)
+			)
 			.returning({ id: like.id });
 
 		if (forceError)
 			throw Error('Forced transaction error for like deletion', { cause: 500 });
 
-		// Update total likes count of entity
-		await updateEntityLikeCount({ id, entity, type: 'decrease' }, tx);
+		await Promise.all([
+			// Update total likes count of entity
+			updateEntityLikeCount({ id, entity, type: 'decrease' }, tx),
 
-		// Update top likes type of entity
-		await updateEntityTopLikes({ id, entity }, tx);
+			// Update top likes type of entity
+			updateEntityTopLikes({ id, entity }, tx),
+		]);
+
 		return deletedLike;
 	});
 
@@ -162,29 +183,23 @@ export const deleteLikeById = async (data: {
 	return deletedLikeWithSUUID[0];
 };
 
-export const likeExists = async (data: {
-	id: SUUID;
-	entity: 'post' | 'comment';
-}) => {
+export const likeExists = async (data: { id?: SUUID; entity?: EntityType }) => {
 	const { id, entity } = data;
-	const entityCondition =
-		entity === 'post'
-			? eq(like.postId, convertToUUID(id))
-			: eq(like.commentId, convertToUUID(id));
+	if (!entity || !id) return;
 
 	const isLike = await db
 		.select({ type: like.type })
 		.from(like)
-		.where(entityCondition);
+		.where(getEntityCondition(entity, id));
 
-	return isLike;
+	return isLike[0];
 };
 
 export const updateEntityLikeCount = async (
 	data: {
-		id: SUUID;
-		entity: 'post' | 'comment';
 		type: 'increase' | 'decrease';
+		id: SUUID;
+		entity: EntityType;
 	},
 	txDb: TransactionType
 ) => {
@@ -195,61 +210,59 @@ export const updateEntityLikeCount = async (
 	);
 	const table = entity === 'post' ? post : comment;
 
-	if (currentEntityLikeCount) {
-		await txDb
-			.update(table)
-			.set({
-				likesCount:
-					type === 'increase'
-						? currentEntityLikeCount.likesCount + 1
-						: currentEntityLikeCount.likesCount - 1,
-			})
-			.where(eq(table.id, convertToUUID(id)));
-	}
+	if (!currentEntityLikeCount) return;
+
+	await txDb
+		.update(table)
+		.set({
+			likesCount:
+				type === 'increase'
+					? currentEntityLikeCount.likesCount + 1
+					: currentEntityLikeCount.likesCount - 1,
+		})
+		.where(eq(table.id, convertToUUID(id)));
 };
 
 export const updateEntityTopLikes = async (
-	data: { id: SUUID; entity: 'post' | 'comment' },
+	data: { id: SUUID; entity: EntityType },
 	txDb: TransactionType
 ) => {
 	const { id, entity } = data;
+
 	const table = entity === 'post' ? post : comment;
 	const currentTopLikes = await getCurrentEntityTop2Likes({ id, entity }, txDb);
 
-	if (currentTopLikes.length > 0) {
-		await txDb
-			.update(table)
-			.set({
-				topLikeType1: currentTopLikes[0] ? currentTopLikes[0].type : null,
-				topLikeType2: currentTopLikes[1] ? currentTopLikes[1]?.type : null,
-			})
-			.where(eq(table.id, convertToUUID(id)));
-	}
+	if (currentTopLikes.length <= 0) return;
+
+	await txDb
+		.update(table)
+		.set({
+			topLikeType1: currentTopLikes[0] ? currentTopLikes[0].type : null,
+			topLikeType2: currentTopLikes[1] ? currentTopLikes[1]?.type : null,
+		})
+		.where(eq(table.id, convertToUUID(id)));
 };
 
 export const getCurrentEntityLikeCount = async (
 	data: {
 		id: SUUID;
-		entity: 'post' | 'comment';
+		entity: EntityType;
 	},
 	txDb?: TransactionType
 ) => {
 	const { id, entity } = data;
-	const idWithUUID = convertToUUID(id);
+
 	const table = entity === 'post' ? post : comment;
-
-	const [selectedEntity] = await (txDb ?? db)
-		.select({
-			likesCount: table.likesCount,
-		})
+	const selectedEntity = await (txDb ?? db)
+		.select({ likesCount: table.likesCount })
 		.from(table)
-		.where(eq(table.id, idWithUUID));
+		.where(eq(table.id, convertToUUID(id)));
 
-	return selectedEntity;
+	return selectedEntity.at(0);
 };
 
 export const getCurrentEntityTop2Likes = async (
-	data: { id: SUUID; entity: 'post' | 'comment' },
+	data: { id: SUUID; entity: EntityType },
 	txDb?: TransactionType
 ) => {
 	const { id, entity } = data;
