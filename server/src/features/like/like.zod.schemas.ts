@@ -6,28 +6,36 @@ import { string } from 'zod';
 const translator = short();
 
 export const createLikeSchema = createInsertSchema(like, {
-	userId: () =>
+	postId: () =>
 		string()
-			.min(1, 'User id is required')
 			.refine(
 				(value) => translator.validate(value),
-				'Valid user id is required'
-			),
-}).omit({
-	id: true,
-	createdAt: true,
-	updatedAt: true,
-});
-
-export const updateLikeSchema = createLikeSchema.pick({
-	type: true,
-});
+				'Valid post id is required'
+			)
+			.optional(),
+	commentId: () =>
+		string()
+			.refine(
+				(value) => translator.validate(value),
+				'Valid comment id is required'
+			)
+			.optional(),
+})
+	.omit({
+		id: true,
+		userId: true,
+		createdAt: true,
+		updatedAt: true,
+	})
+	.refine((data) => (data.postId ? 1 : 0) + (data.commentId ? 1 : 0) === 1, {
+		message: 'Exactly one of postId or commentId must be provided',
+		path: ['postId', 'commentId'],
+	});
 
 export type LikeType = Omit<
 	typeof createLikeSchema._type,
-	'userId' | 'postId' | 'commentId'
+	'postId' | 'commentId'
 > & {
-	userId: SUUID;
 	postId: SUUID | null;
 	commentId: SUUID | null;
 };

@@ -14,13 +14,14 @@ export const like = pgTable(
 			.references(() => user.id, { onDelete: 'cascade' }),
 		postId: uuid().references(() => post.id, { onDelete: 'cascade' }),
 		commentId: uuid().references(() => comment.id, { onDelete: 'cascade' }),
-		type: likeTypesEnum().default('like'),
+		type: likeTypesEnum().default('like').notNull(),
 		...timestamps,
 	},
 	(table) => [
 		check(
-			'like_at_least_one_entity',
-			sql`${table.postId} IS NOT NULL OR ${table.commentId} IS NOT NULL`
+			'like_only_one_entity',
+			sql`(${table.postId} IS NOT NULL AND ${table.commentId} IS NULL) OR 
+			(${table.commentId} IS NOT NULL AND ${table.postId} IS NULL)`
 		),
 	]
 );
