@@ -58,8 +58,7 @@ export const findDetailedLikes = async (data: {
 	return detailedLikesWithSUUID;
 };
 
-// Create likes
-export const makeLike = async (
+export const upsertLike = async (
 	data: Omit<LikeType, 'postId' | 'commentId'> & {
 		userId: SUUID;
 		id?: SUUID;
@@ -70,8 +69,8 @@ export const makeLike = async (
 	const { id, userId, entity, forceError, ...goodData } = data;
 	if (!id || !entity) return;
 
-	const newLike = await db.transaction(async (tx) => {
-		const newLike = await tx
+	const likeData = await db.transaction(async (tx) => {
+		const likeData = await tx
 			.insert(like)
 			.values({
 				...goodData,
@@ -79,70 +78,47 @@ export const makeLike = async (
 				postId: entity === 'post' ? convertToUUID(id) : null,
 				commentId: entity === 'comment' ? convertToUUID(id) : null,
 			})
-			.returning({ id: like.id });
-
-		if (forceError)
-			throw Error('Forced transaction error for like creation', {
-				cause: 500,
+			.onConflictDoUpdate({
+				target: [like.userId, entity === 'post' ? like.postId : like.commentId],
+				set: {
+					...goodData,
+					updatedAt: new Date(),
+				},
+			})
+			.returning({
+				id: like.id,
+				createdAt: like.createdAt,
+				updatedAt: like.updatedAt,
 			});
+
+		if (forceError) {
+			throw Error('Forced transaction error for like upsert', { cause: 500 });
+		}
+
+		const isNewInsert =
+			likeData[0]?.createdAt.getTime() === likeData[0]?.updatedAt.getTime();
 
 		await Promise.all([
 			// Update total likes count of entity
-			updateEntityLikeCount({ id, entity, type: 'increase' }, tx),
-
+			isNewInsert
+				? updateEntityLikeCount({ type: 'increase', id, entity }, tx)
+				: Promise.resolve(),
 			// Update top likes type of entity
 			updateEntityTopLikes({ id, entity }, tx),
 		]);
 
-		return newLike;
+		return likeData;
 	});
 
-	const newLikeWithSUUID = newLike.map((like) => ({
-		...like,
-		id: convertToSUUID(like.id),
+	const likeDataWithSUUID = likeData.map(({ id }) => ({
+		id: convertToSUUID(id),
 	}));
 
-	return newLikeWithSUUID.at(0);
-};
-
-// Update Likes
-export const updateLikeById = async (
-	data: Omit<LikeType, 'postId' | 'commentId'> & {
-		userId: SUUID;
-		id?: SUUID;
-		entity?: EntityType;
-	}
-) => {
-	const { id, entity, userId, ...goodData } = data;
-	if (!entity || !id) return;
-
-	const updatedLike = await db.transaction(async (tx) => {
-		const updatedLike = await tx
-			.update(like)
-			.set(goodData)
-			.where(
-				and(
-					eq(like.userId, convertToUUID(userId)),
-					getEntityCondition(entity, id)
-				)
-			)
-			.returning({ id: like.id });
-
-		// Update top likes type of entity
-		await updateEntityTopLikes({ id, entity }, tx);
-
-		return updatedLike;
-	});
-
-	const updatedLikeWithSUUID = updatedLike.map((like) => ({
-		...like,
-		id: convertToSUUID(like.id),
-	}));
-	return updatedLikeWithSUUID[0];
+	return likeDataWithSUUID;
 };
 
 // Delete likes
-export const deleteLikeById = async (data: {
+export const deleteLike = async (data: {
 	userId: SUUID;
 	id?: SUUID;
 	entity?: EntityType;
@@ -176,10 +152,10 @@ export const deleteLikeById = async (data: {
 		return deletedLike;
 	});
 
-	const deletedLikeWithSUUID = deletedLike.map((like) => ({
-		...like,
-		id: convertToSUUID(like.id),
+	const deletedLikeWithSUUID = deletedLike.map(({ id }) => ({
+		id: convertToSUUID(id),
 	}));
+
 	return deletedLikeWithSUUID[0];
 };
 
