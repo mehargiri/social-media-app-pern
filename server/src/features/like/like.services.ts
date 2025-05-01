@@ -110,8 +110,9 @@ export const upsertLike = async (
 		return likeData;
 	});
 
-	const likeDataWithSUUID = likeData.map(({ id }) => ({
-		id: convertToSUUID(id),
+	const likeDataWithSUUID = likeData.map((like) => ({
+		...like,
+		id: convertToSUUID(like.id),
 	}));
 
 	return likeDataWithSUUID;
@@ -168,7 +169,7 @@ export const likeExists = async (data: { id?: SUUID; entity?: EntityType }) => {
 		.from(like)
 		.where(getEntityCondition(entity, id));
 
-	return isLike[0];
+	return isLike[0] ? true : false;
 };
 
 export const updateEntityLikeCount = async (

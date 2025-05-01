@@ -1,9 +1,11 @@
 import { db } from '@/db/index.js';
 import { collegeTypeEnum } from '@/db/schema/college.js';
+import { likeTypesEnum } from '@/db/schema/like.js';
 import { user, userGenderEnum } from '@/db/schema/user.js';
 import { CollegeType } from '@/features/college/college.zod.schemas.js';
 import { CommentType } from '@/features/comment/comment.zod.schemas.js';
 import { HighschoolType } from '@/features/highschool/highschool.zod.schemas.js';
+import { LikeType } from '@/features/like/like.zod.schemas.js';
 import { PostType } from '@/features/post/post.zod.schemas.js';
 import { UserType } from '@/features/user/user.zod.schemas.js';
 import { WorkType } from '@/features/work/work.zod.schemas.js';
@@ -149,5 +151,12 @@ export const createTestReply = (data: {
 	commentLevel: data.commentLevel,
 	postId: '' as SUUID,
 	parentCommentId: '' as SUUID,
+	userId: '',
+});
+
+export const createTestLike = (): LikeType & { userId: string } => ({
+	type: faker.helpers.arrayElement(likeTypesEnum.enumValues),
+	postId: faker.datatype.boolean() ? sampleSUUID : null,
+	commentId: faker.datatype.boolean() ? sampleSUUID : null,
 	userId: '',
 });
