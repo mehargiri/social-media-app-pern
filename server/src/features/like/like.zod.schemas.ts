@@ -10,14 +10,14 @@ export const createLikeSchema = createInsertSchema(like, {
 		string()
 			.refine(
 				(value) => translator.validate(value),
-				'Valid post id is required'
+				'Valid id is required for post'
 			)
 			.optional(),
 	commentId: () =>
 		string()
 			.refine(
 				(value) => translator.validate(value),
-				'Valid comment id is required'
+				'Valid id is required for comment'
 			)
 			.optional(),
 })

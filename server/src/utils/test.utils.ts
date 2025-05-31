@@ -27,7 +27,7 @@ export type LoginResponseWithSuccess = SuperTestResponse<{
 export type HTTPError400TestsType<T> = [
 	test_description: string,
 	property: keyof T,
-	obj: Partial<Record<keyof T, T[keyof T]>>,
+	obj: Partial<T>,
 	errMessage: string
 ];
 
@@ -156,7 +156,7 @@ export const createTestReply = (data: {
 
 export const createTestLike = (): LikeType & { userId: string } => ({
 	type: faker.helpers.arrayElement(likeTypesEnum.enumValues),
-	postId: faker.datatype.boolean() ? sampleSUUID : null,
-	commentId: faker.datatype.boolean() ? sampleSUUID : null,
+	postId: '' as unknown as SUUID,
+	commentId: '' as unknown as SUUID,
 	userId: '',
 });

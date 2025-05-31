@@ -11,7 +11,10 @@ export default function (schema: ZodTypeAny) {
 				const message = error.issues.map(
 					(issue) =>
 						`${
-							typeof issue.path[0] === 'string' ? issue.path[0] : 'Unknown-path'
+							Array.isArray(issue.path) &&
+							issue.path.every((path) => typeof path === 'string')
+								? issue.path.join(', ')
+								: 'Unknown-path'
 						}: ${issue.message}`
 				);
 				return void res.status(400).json({ error: message });

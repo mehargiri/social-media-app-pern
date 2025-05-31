@@ -146,7 +146,10 @@ describe('Like Controller Functions', () => {
 		};
 
 		it('should throw Error when both postId and commentId is provided', async () => {
-			if (postLikeToCreate) postLikeToCreate.commentId = sampleSUUID;
+			if (postLikeToCreate) {
+				postLikeToCreate.commentId = sampleSUUID;
+				postLikeToCreate.postId = sampleSUUID;
+			}
 			req.body = postLikeToCreate;
 
 			await expect(callTestFn()).rejects.toThrowError(
