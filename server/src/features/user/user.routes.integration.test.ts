@@ -39,7 +39,6 @@ import {
 import { getUser, getUsersByName } from './user.controllers.js';
 import { UserType } from './user.zod.schemas.js';
 
-// eslint-disable-next-line @typescript-eslint/no-misused-promises
 const api = supertest(app);
 const ARRAY_LENGTH = 5;
 
@@ -84,7 +83,7 @@ const createUserHTTP400Errors: HTTPError400TestsType<UserType>[] = [
 		'email is empty',
 		'email',
 		{ email: '' },
-		'email: Email is required; email: Email must be valid',
+		'email: Email must be valid; email: Email is required',
 	],
 	[
 		'email is not valid',

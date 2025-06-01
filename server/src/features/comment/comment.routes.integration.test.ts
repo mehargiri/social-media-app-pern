@@ -29,7 +29,6 @@ import { CommentType } from './comment.zod.schemas.js';
 const testReplyLevel1 = createTestReply({ commentLevel: 1 });
 const testReplyLevel2 = createTestReply({ commentLevel: 2 });
 
-// eslint-disable-next-line @typescript-eslint/no-misused-promises
 const api = supertest(app);
 const testPost = createTestPost();
 const otherTestPost = createTestPost();
@@ -60,13 +59,13 @@ const comment400Errors: HTTPError400TestsType<CommentType>[] = [
 	[
 		'post id is empty',
 		'postId',
-		{ postId: '' },
+		{ postId: '' as unknown as SUUID },
 		'postId: Post id is required; postId: Valid post id is required',
 	],
 	[
 		'post id is not valid',
 		'postId',
-		{ postId: 'random-id' },
+		{ postId: 'random-id' as unknown as SUUID },
 		'postId: Valid post id is required',
 	],
 	[
@@ -84,7 +83,7 @@ const comment400Errors: HTTPError400TestsType<CommentType>[] = [
 	[
 		'parent comment id is not valid',
 		'parentCommentId',
-		{ parentCommentId: 'random-id' },
+		{ parentCommentId: 'random-id' as unknown as SUUID },
 		'parentCommentId: Valid parent comment id is required',
 	],
 ];

@@ -21,7 +21,6 @@ import supertest from 'supertest';
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import { getDetailedLikes } from './like.controllers.js';
 
-// eslint-disable-next-line @typescript-eslint/no-misused-promises
 const api = supertest(app);
 
 const testUsers = Array.from({ length: 10 }).map((_, index) => ({
@@ -337,9 +336,9 @@ describe('Like Routes Integration Tests', () => {
 				})
 				.expect(400);
 
-			expect(response.body.error).toEqual([
-				'postId, commentId: Exactly one of postId or commentId must be provided',
-			]);
+			expect(response.body.error).toEqual(
+				'Exactly one of postId or commentId must be provided'
+			);
 		});
 
 		it('should return HTTP 400 and a message when the route is accessed without valid postId and commentId', async () => {
@@ -349,9 +348,9 @@ describe('Like Routes Integration Tests', () => {
 				.send({ ...testLikesForPost.at(0), postId: null, commentId: null })
 				.expect(400);
 
-			expect(response.body.error).toEqual([
-				'postId, commentId: Exactly one of postId or commentId must be provided',
-			]);
+			expect(response.body.error).toEqual(
+				'Exactly one of postId or commentId must be provided'
+			);
 		});
 
 		it('should return HTTP 400 and a message when the route is accessed with invalid postId', async () => {

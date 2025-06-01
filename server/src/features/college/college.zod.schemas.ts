@@ -1,6 +1,6 @@
 import { college, collegeTypeEnum } from '@/db/schema/index.js';
 import { createInsertSchema } from 'drizzle-zod';
-import { z } from 'zod';
+import { enum as enum_ } from 'zod/v4';
 
 export const createCollegeSchema = createInsertSchema(college, {
 	name: (schema) =>
@@ -24,8 +24,8 @@ export const createCollegeSchema = createInsertSchema(college, {
 			.min(1901, 'End Year cannot be less than 1901')
 			.max(9999, 'End Year cannot be more than 9999'),
 	type: () =>
-		z.enum(collegeTypeEnum.enumValues, {
-			errorMap: () => ({
+		enum_(collegeTypeEnum.enumValues, {
+			error: () => ({
 				message:
 					'Invalid type provided. Accepted values are: college, graduate_school, university.',
 			}),
@@ -37,4 +37,4 @@ export const createCollegeSchema = createInsertSchema(college, {
 	updatedAt: true,
 });
 
-export type CollegeType = typeof createCollegeSchema._type;
+export type CollegeType = typeof createCollegeSchema._output;

@@ -1,7 +1,7 @@
 import { comment } from '@/db/schema/comment.js';
 import { createInsertSchema } from 'drizzle-zod';
 import short, { SUUID } from 'short-uuid';
-import { string } from 'zod';
+import { string } from 'zod/v4';
 
 const translator = short();
 
@@ -47,11 +47,11 @@ export const updateCommentSchema = createCommentSchema.omit({
 });
 
 export type CommentType = Omit<
-	typeof createCommentSchema._type,
+	typeof createCommentSchema._output,
 	'postId' | 'parentCommentId'
 > & {
 	postId: SUUID;
 	parentCommentId: SUUID | null;
 };
 
-export type UpdateCommentType = typeof updateCommentSchema._type;
+export type UpdateCommentType = typeof updateCommentSchema._output;

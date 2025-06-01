@@ -29,7 +29,6 @@ import {
 import { getPost, getPosts } from './post.controllers.js';
 import { PostType } from './post.zod.schemas.js';
 
-// eslint-disable-next-line @typescript-eslint/no-misused-promises
 const api = supertest(app);
 
 const post400Errors: HTTPError400TestsType<PostType>[] = [
@@ -49,10 +48,9 @@ const post400Errors: HTTPError400TestsType<PostType>[] = [
 		'assets has an attached image that is not from an approved filetypes: png and jpeg',
 		'assets',
 		{
-			assets: join(
-				__dirname,
-				'../../testAssets/blank-profile-picture-heic.heic'
-			),
+			assets: [
+				join(__dirname, '../../testAssets/blank-profile-picture-heic.heic'),
+			],
 		},
 		'Invalid file type. Allowed: png and jpg/jpeg. Invalid file in assets',
 	],
@@ -60,10 +58,9 @@ const post400Errors: HTTPError400TestsType<PostType>[] = [
 		'assets has an attached image that is too big',
 		'assets',
 		{
-			assets: join(
-				__dirname,
-				'../../testAssets/blank-profile-picture-too-big.png'
-			),
+			assets: [
+				join(__dirname, '../../testAssets/blank-profile-picture-too-big.png'),
+			],
 		},
 		'File size exceeds the limit. Allowed max: 1MB',
 	],
@@ -375,7 +372,8 @@ describe('Post Routes Integration Tests', () => {
 		it.each(post400Errors)(
 			'should return HTTP 400 when the post %s',
 			async (_testDescription, property, obj, errMessage) => {
-				if (property === 'content') testPost.content = obj[property] as string;
+				if (property === 'content')
+					testPost.content = obj[property] as unknown as string;
 
 				const route = api
 					.post(testUrl)
@@ -383,7 +381,7 @@ describe('Post Routes Integration Tests', () => {
 					.field(testPost);
 
 				if (property === 'assets') {
-					route.attach(property, obj[property] as string);
+					route.attach(property, obj[property]?.at(0) as unknown as string);
 				}
 
 				const response: ResponseWithError = await route.expect(400);
@@ -456,7 +454,8 @@ describe('Post Routes Integration Tests', () => {
 		it.each(post400Errors)(
 			'should return HTTP 400 when the post %s',
 			async (_testDescription, property, obj, errMessage) => {
-				if (property === 'content') testPost.content = obj[property] as string;
+				if (property === 'content')
+					testPost.content = obj[property] as unknown as string;
 
 				const route = api
 					.patch(testUrl)
@@ -464,7 +463,7 @@ describe('Post Routes Integration Tests', () => {
 					.field(testPost);
 
 				if (property === 'assets') {
-					route.attach(property, obj[property] as string);
+					route.attach(property, obj[property]?.at(0) as unknown as string);
 				}
 
 				const response: ResponseWithError = await route.expect(400);

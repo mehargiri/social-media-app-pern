@@ -1,7 +1,7 @@
 import { NextFunction, Request, Response } from 'express';
-import { ZodError, ZodTypeAny } from 'zod';
+import { ZodError, ZodType } from 'zod/v4';
 
-export default function (schema: ZodTypeAny) {
+export default function (schema: ZodType) {
 	return (req: Request, res: Response, next: NextFunction) => {
 		try {
 			schema.parse(req.body);

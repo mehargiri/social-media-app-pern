@@ -20,4 +20,4 @@ export const createWorkSchema = createInsertSchema(work, {
 			.max(9999, 'End Year cannot be more than 9999'),
 }).omit({ id: true, userId: true, createdAt: true, updatedAt: true });
 
-export type WorkType = typeof createWorkSchema._type;
+export type WorkType = typeof createWorkSchema._output;

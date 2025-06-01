@@ -18,4 +18,4 @@ export const createPostSchema = createInsertSchema(post, {
 	likesCount: true,
 });
 
-export type PostType = typeof createPostSchema._type;
+export type PostType = typeof createPostSchema._output;

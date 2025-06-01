@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-misused-promises */
 import app from '@/app.js';
 import { db } from '@/db/index.js';
 import { user } from '@/db/schema/index.js';
@@ -68,8 +67,8 @@ describe('Auth Routes Integration Tests', () => {
 			);
 
 			expect(response.body.error).toEqual([
-				'email: Email is required',
 				'email: Email must be valid',
+				'email: Email is required',
 			]);
 		});
 

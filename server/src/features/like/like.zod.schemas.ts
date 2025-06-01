@@ -1,7 +1,7 @@
 import { like } from '@/db/schema/like.js';
 import { createInsertSchema } from 'drizzle-zod';
 import short, { SUUID } from 'short-uuid';
-import { string } from 'zod';
+import { string } from 'zod/v4';
 
 const translator = short();
 
@@ -20,20 +20,19 @@ export const createLikeSchema = createInsertSchema(like, {
 				'Valid id is required for comment'
 			)
 			.optional(),
-})
-	.omit({
-		id: true,
-		userId: true,
-		createdAt: true,
-		updatedAt: true,
-	})
-	.refine((data) => (data.postId ? 1 : 0) + (data.commentId ? 1 : 0) === 1, {
-		message: 'Exactly one of postId or commentId must be provided',
-		path: ['postId', 'commentId'],
-	});
+}).omit({
+	id: true,
+	userId: true,
+	createdAt: true,
+	updatedAt: true,
+});
+// .refine((data) => (data.postId ? 1 : 0) + (data.commentId ? 1 : 0) === 1, {
+// 	message: 'Exactly one of postId or commentId must be provided',
+// 	path: ['postId', 'commentId'],
+// });
 
 export type LikeType = Omit<
-	typeof createLikeSchema._type,
+	typeof createLikeSchema._output,
 	'postId' | 'commentId'
 > & {
 	postId: SUUID | null;

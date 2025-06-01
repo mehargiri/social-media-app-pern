@@ -1,5 +1,6 @@
 import { user } from '@/db/schema/index.js';
 import { createInsertSchema } from 'drizzle-zod';
+import { email } from 'zod/v4';
 
 const passwordRegex =
 	/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[^\s]{8,}$/;
@@ -16,8 +17,8 @@ export const insertUserSchema = createInsertSchema(user, {
 			.min(1, 'Last Name is required')
 			.max(260, 'Last Name cannot be more than 260 characters')
 			.trim(),
-	email: (schema) =>
-		schema.min(1, 'Email is required').email('Email must be valid').trim(),
+	email: () => email('Email must be valid').min(1, 'Email is required').trim(),
+	// schema.min(1, 'Email is required').email('Email must be valid').trim(),
 	password: (schema) =>
 		schema
 			.min(8, 'Password is required and must be minimum of 8 characters')
@@ -52,4 +53,4 @@ export const insertUserSchema = createInsertSchema(user, {
 	confirmedEmail: true,
 });
 
-export type UserType = typeof insertUserSchema._type;
+export type UserType = typeof insertUserSchema._output;
