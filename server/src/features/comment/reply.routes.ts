@@ -4,6 +4,6 @@ import { getReplies } from './comment.controllers.js';
 
 const router = Router();
 
-router.get('/', tokenHandler, getReplies);
+router.get('/:parentCommentId', tokenHandler, getReplies);
 
 export default router;

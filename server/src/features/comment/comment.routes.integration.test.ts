@@ -162,7 +162,8 @@ describe('Comment Routes Integration Tests', () => {
 		let testUrl: string, otherTestPostSUUID: SUUID;
 
 		beforeAll(async () => {
-			testUrl = `${testUrlBase}?postId=${testPostSUUID}`;
+			// testUrl = `${testUrlBase}?postId=${testPostSUUID}`;
+			testUrl = fullTestUrl(testPostSUUID);
 
 			const [otherTestUserId] = await db
 				.insert(user)
@@ -208,7 +209,7 @@ describe('Comment Routes Integration Tests', () => {
 
 		it('should return HTTP 400 and a message when the route is accessed with invalid postId', async () => {
 			const response: ResponseWithError = await api
-				.get(`${testUrlBase}?postId=random`)
+				.get(`${testUrlBase}/random`)
 				.auth(authToken, { type: 'bearer' })
 				.expect(400);
 
@@ -252,7 +253,7 @@ describe('Comment Routes Integration Tests', () => {
 			});
 
 			const cursorResponse: getCommentsResponse = await api
-				.get(`${testUrl}&cursor=${cursor}`)
+				.get(`${testUrl}?cursor=${cursor}`)
 				.auth(authToken, { type: 'bearer' })
 				.expect(200);
 
