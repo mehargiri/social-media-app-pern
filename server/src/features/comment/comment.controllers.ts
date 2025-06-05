@@ -13,13 +13,14 @@ import { CommentType, UpdateCommentType } from './comment.zod.schemas.js';
 
 // Read Comments
 export const getComments = async (
-	req: Request<never, never, never, { postId: SUUID; cursor?: string }>,
+	req: Request<{ postId: SUUID }, never, never, { cursor?: string }>,
 	res: Response<{
 		comments: Awaited<ReturnType<typeof findComments>>;
 		nextCursor: string | null;
 	}>
 ) => {
-	const { postId, cursor } = req.query;
+	const { postId } = req.params;
+	const { cursor } = req.query;
 	validateSUUID(postId, 'post');
 
 	const decodedCursor = cursor
@@ -39,18 +40,14 @@ export const getComments = async (
 };
 
 export const getReplies = async (
-	req: Request<
-		never,
-		never,
-		never,
-		{ parentCommentId: SUUID; cursor?: string }
-	>,
+	req: Request<{ parentCommentId: SUUID }, never, never, { cursor?: string }>,
 	res: Response<{
 		replies: Awaited<ReturnType<typeof findReplies>>;
 		nextCursor: string | null;
 	}>
 ) => {
-	const { parentCommentId, cursor } = req.query;
+	const { parentCommentId } = req.params;
+	const { cursor } = req.query;
 	validateSUUID(parentCommentId, 'parent comment');
 
 	const decodedCursor = cursor

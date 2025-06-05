@@ -14,7 +14,7 @@ import {
 
 const router = Router();
 
-router.get('/', tokenHandler, getComments);
+router.get('/:postId', tokenHandler, getComments);
 router.post(
 	'/',
 	[tokenHandler, validateData(createCommentSchema)],

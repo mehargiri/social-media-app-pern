@@ -82,28 +82,28 @@ describe('Reply Routes Integration Tests', () => {
 
 	describe('GET replies route', () => {
 		const testUrlBase = '/api/replies';
+		let testUrl: string;
+
+		beforeAll(() => {
+			testUrl = `${testUrlBase}/${testParentCommentSUUID}`;
+		});
 
 		it('should return HTTP 401 when the route is accessed without login', async () => {
-			await api
-				.get(`${testUrlBase}?parentCommentId=${testParentCommentSUUID}`)
-				.expect(401);
+			await api.get(testUrl).expect(401);
 		});
 
 		it('should return HTTP 403 when the route is accessed with an expired token', async () => {
 			vi.useFakeTimers({ shouldAdvanceTime: true });
 			vi.advanceTimersByTime(2 * 60 * 1000);
 
-			await api
-				.get(`${testUrlBase}?parentCommentId=${testParentCommentSUUID}`)
-				.auth(authToken, { type: 'bearer' })
-				.expect(403);
+			await api.get(testUrl).auth(authToken, { type: 'bearer' }).expect(403);
 
 			vi.useRealTimers();
 		});
 
 		it('should return HTTP 400 and a message when the route is accessed with invalid parentCommentId', async () => {
 			const response: ResponseWithError = await api
-				.get(`${testUrlBase}?parentCommentId=random`)
+				.get(`${testUrlBase}/random`)
 				.auth(authToken, { type: 'bearer' })
 				.expect(400);
 
@@ -133,7 +133,7 @@ describe('Reply Routes Integration Tests', () => {
 			];
 
 			const response: getRepliesResponse = await api
-				.get(`${testUrlBase}?parentCommentId=${testParentCommentSUUID}`)
+				.get(testUrl)
 				.auth(authToken, { type: 'bearer' })
 				.expect(200);
 
@@ -147,9 +147,7 @@ describe('Reply Routes Integration Tests', () => {
 			});
 
 			const cursorResponse: getRepliesResponse = await api
-				.get(
-					`${testUrlBase}?parentCommentId=${testParentCommentSUUID}&cursor=${cursor}`
-				)
+				.get(`${testUrl}?cursor=${cursor}`)
 				.auth(authToken, { type: 'bearer' })
 				.expect(200);
 
