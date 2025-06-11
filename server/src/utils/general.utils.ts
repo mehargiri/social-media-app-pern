@@ -7,9 +7,10 @@ import short, { SUUID } from 'short-uuid';
 // UUID Conversions
 const translator = short();
 
-export const validateSUUID = (id: string | SUUID) => {
+export const validateSUUID = (id: string | SUUID, idName: string) => {
 	const validId = translator.validate(id, true);
-	if (!validId) throw Error('Valid id is required', { cause: 400 });
+	if (!validId)
+		throw Error(`Valid id is required for ${idName}`, { cause: 400 });
 };
 
 export const convertToUUID = (id: string | SUUID) => {
