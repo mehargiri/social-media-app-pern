@@ -1,17 +1,13 @@
 import { createTestCollege, sampleSUUID } from '@/utils/test.utils.js';
 import { Request, Response } from 'express';
-import { generate, SUUID } from 'short-uuid';
+import { SUUID } from 'short-uuid';
 import { afterAll, beforeAll, describe, expect, it, Mock, vi } from 'vitest';
 import {
 	createCollege,
 	deleteCollege,
 	updateCollege,
 } from './college.controllers.js';
-import {
-	collegeExists,
-	deleteCollegeById,
-	updateCollegeById,
-} from './college.services.js';
+import { deleteCollegeById, updateCollegeById } from './college.services.js';
 import { CollegeType } from './college.zod.schemas.js';
 
 const testCollege = createTestCollege();
@@ -34,7 +30,6 @@ describe('College Controller Functions', () => {
 		makeCollege: vi.fn(),
 		updateCollegeById: vi.fn(),
 		deleteCollegeById: vi.fn(),
-		collegeExists: vi.fn(),
 	}));
 
 	afterAll(() => {
@@ -63,18 +58,11 @@ describe('College Controller Functions', () => {
 
 		it('should throw Error when the provided id in req.params is invalid', async () => {
 			await expect(callTestFn('random-id' as SUUID)).rejects.toThrowError(
-				Error('Valid id is required', { cause: 400 })
-			);
-		});
-
-		it('should throw Error when the provided id in req.params does not exist', async () => {
-			await expect(callTestFn(generate())).rejects.toThrowError(
-				Error('College does not exist', { cause: 404 })
+				Error('Valid id is required for college', { cause: 400 })
 			);
 		});
 
 		it('should call res.json with the updated id on success', async () => {
-			(collegeExists as Mock).mockResolvedValue(true);
 			(updateCollegeById as Mock).mockResolvedValue({ id: sampleSUUID });
 
 			await callTestFn(sampleSUUID);
@@ -97,18 +85,11 @@ describe('College Controller Functions', () => {
 
 		it('should throw Error when the provided id in req.params is invalid', async () => {
 			await expect(callTestFn('random-id' as SUUID)).rejects.toThrowError(
-				Error('Valid id is required', { cause: 400 })
-			);
-		});
-
-		it('should throw Error when the provided id in req.params does not exist', async () => {
-			await expect(callTestFn(generate())).rejects.toThrowError(
-				Error('College does not exist', { cause: 404 })
+				Error('Valid id is required for college', { cause: 400 })
 			);
 		});
 
 		it('should call res.json with a custom message', async () => {
-			(collegeExists as Mock).mockResolvedValue(true);
 			(deleteCollegeById as Mock).mockResolvedValue({ id: sampleSUUID });
 
 			await callTestFn(sampleSUUID);
