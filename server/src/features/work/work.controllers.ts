@@ -1,12 +1,7 @@
 import { validateSUUID } from '@/utils/general.utils.js';
 import { Request, Response } from 'express';
 import { SUUID } from 'short-uuid';
-import {
-	deleteWorkById,
-	makeWork,
-	updateWorkById,
-	workExists,
-} from './work.services.js';
+import { deleteWorkById, makeWork, updateWorkById } from './work.services.js';
 import { WorkType } from './work.zod.schemas.js';
 
 export const createWork = async (
@@ -22,16 +17,12 @@ export const updateWork = async (
 	res: Response
 ) => {
 	const { id } = req.params;
-	validateSUUID(id);
-
-	const isWork = await workExists({ id });
-	if (!isWork) throw Error('Work does not exist', { cause: 404 });
+	validateSUUID(id, 'work');
 
 	const updatedWork = await updateWorkById({
 		...req.body,
 		id,
 		userId: req.userId as SUUID,
-		updatedAt: new Date(),
 	});
 
 	return void res.json(updatedWork);
@@ -42,10 +33,7 @@ export const deleteWork = async (
 	res: Response
 ) => {
 	const { id } = req.params;
-	validateSUUID(id);
-
-	const isWork = await workExists({ id });
-	if (!isWork) throw Error('Work does not exist', { cause: 404 });
+	validateSUUID(id, 'work');
 
 	await deleteWorkById({ id, userId: req.userId as SUUID });
 

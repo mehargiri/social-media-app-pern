@@ -1,9 +1,9 @@
 import { createTestWork, sampleSUUID } from '@/utils/test.utils.js';
 import { Request, Response } from 'express';
-import { generate, SUUID } from 'short-uuid';
+import { SUUID } from 'short-uuid';
 import { afterAll, beforeAll, describe, expect, it, Mock, vi } from 'vitest';
 import { createWork, deleteWork, updateWork } from './work.controllers.js';
-import { deleteWorkById, updateWorkById, workExists } from './work.services.js';
+import { deleteWorkById, updateWorkById } from './work.services.js';
 import { WorkType } from './work.zod.schemas.js';
 
 const testWork = createTestWork();
@@ -53,18 +53,11 @@ describe('Work Controller Function', () => {
 
 		it('should throw Error when the provided id in req.params is invalid', async () => {
 			await expect(callTestFn('random-id' as SUUID)).rejects.toThrowError(
-				Error('Valid id is required', { cause: 400 })
-			);
-		});
-
-		it('should throw Error when the provided id in req.params is valid but it does not exist', async () => {
-			await expect(callTestFn(generate())).rejects.toThrowError(
-				Error('Work does not exist', { cause: 404 })
+				Error('Valid id is required for work', { cause: 400 })
 			);
 		});
 
 		it('should call res.json with the updated id on success', async () => {
-			(workExists as Mock).mockResolvedValue(true);
 			(updateWorkById as Mock).mockResolvedValue({ id: sampleSUUID });
 			await callTestFn(sampleSUUID);
 
@@ -87,18 +80,11 @@ describe('Work Controller Function', () => {
 
 		it('should throw Error when the provided id in req.params is invalid', async () => {
 			await expect(callTestFn('random-id' as SUUID)).rejects.toThrowError(
-				Error('Valid id is required', { cause: 400 })
-			);
-		});
-
-		it('should throw Error when the provided id in req.params is valid but does not exist', async () => {
-			await expect(callTestFn(generate())).rejects.toThrowError(
-				Error('Work does not exist', { cause: 404 })
+				Error('Valid id is required for work', { cause: 400 })
 			);
 		});
 
 		it('should call res.json with a custom message on success', async () => {
-			(workExists as Mock).mockResolvedValue(true);
 			(deleteWorkById as Mock).mockResolvedValue({ id: sampleSUUID });
 			await callTestFn(sampleSUUID);
 
