@@ -3,6 +3,7 @@ import { highschool } from '@/db/schema/index.js';
 import { convertToSUUID, convertToUUID } from '@/utils/general.utils.js';
 import { and, eq } from 'drizzle-orm';
 import { SUUID } from 'short-uuid';
+import { highschoolExists } from './highschool.services.helpers.js';
 import { HighschoolType } from './highschool.zod.schemas.js';
 
 export const makeHighschool = async (
@@ -14,21 +15,25 @@ export const makeHighschool = async (
 		.values({ ...goodData, userId: convertToUUID(userId) })
 		.returning({ id: highschool.id });
 
-	const newHighschoolWithSUUID = newHighschool.map((school) => ({
+	const [newHighschoolWithSUUID] = newHighschool.map((school) => ({
 		...school,
 		id: convertToSUUID(school.id),
 	}));
 
-	return newHighschoolWithSUUID[0];
+	return newHighschoolWithSUUID;
 };
 
 export const updateHighschoolById = async (
-	data: HighschoolType & { id: SUUID; userId: SUUID; updatedAt: Date }
+	data: HighschoolType & { id: SUUID; userId: SUUID }
 ) => {
 	const { id, userId, ...goodData } = data;
+
+	const isHighschool = await highschoolExists({ id });
+	if (!isHighschool) throw Error('Highschool does not exist', { cause: 404 });
+
 	const updatedHighschool = await db
 		.update(highschool)
-		.set(goodData)
+		.set({ ...goodData, updatedAt: new Date() })
 		.where(
 			and(
 				eq(highschool.id, convertToUUID(id)),
@@ -37,12 +42,12 @@ export const updateHighschoolById = async (
 		)
 		.returning({ id: highschool.id });
 
-	const updatedHighschoolWithSUUID = updatedHighschool.map((school) => ({
+	const [updatedHighschoolWithSUUID] = updatedHighschool.map((school) => ({
 		...school,
 		id: convertToSUUID(school.id),
 	}));
 
-	return updatedHighschoolWithSUUID[0];
+	return updatedHighschoolWithSUUID;
 };
 
 export const deleteHighschoolById = async (data: {
@@ -50,6 +55,9 @@ export const deleteHighschoolById = async (data: {
 	userId: SUUID;
 }) => {
 	const { id, userId } = data;
+
+	const isHighschool = await highschoolExists({ id });
+	if (!isHighschool) throw Error('Highschool does not exist', { cause: 404 });
 
 	const deletedHighschool = await db
 		.delete(highschool)
@@ -61,19 +69,10 @@ export const deleteHighschoolById = async (data: {
 		)
 		.returning({ id: highschool.id });
 
-	const deletedHighschoolWithSUUID = deletedHighschool.map((school) => ({
+	const [deletedHighschoolWithSUUID] = deletedHighschool.map((school) => ({
 		...school,
 		id: convertToSUUID(school.id),
 	}));
 
-	return deletedHighschoolWithSUUID[0];
-};
-
-export const highschoolExists = async (data: { id: SUUID }) => {
-	const school = await db
-		.select({ name: highschool.name })
-		.from(highschool)
-		.where(eq(highschool.id, convertToUUID(data.id)));
-
-	return school[0] ? true : false;
+	return deletedHighschoolWithSUUID;
 };

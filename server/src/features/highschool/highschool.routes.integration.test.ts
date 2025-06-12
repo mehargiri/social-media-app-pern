@@ -186,6 +186,7 @@ describe('Highschool Routes Integration Tests', () => {
 				.auth(authToken, { type: 'bearer' })
 				.send(sampleHighschool)
 				.expect(400);
+
 			expect(response.body.error).toEqual(
 				'Valid id is required for highschool'
 			);
@@ -197,6 +198,7 @@ describe('Highschool Routes Integration Tests', () => {
 				.auth(authToken, { type: 'bearer' })
 				.send(sampleHighschool)
 				.expect(404);
+
 			expect(response.body.error).toEqual('Highschool does not exist');
 		});
 
