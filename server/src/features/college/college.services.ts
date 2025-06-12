@@ -3,6 +3,7 @@ import { college } from '@/db/schema/index.js';
 import { convertToSUUID, convertToUUID } from '@/utils/general.utils.js';
 import { and, eq } from 'drizzle-orm';
 import { SUUID } from 'short-uuid';
+import { collegeExists } from './college.services.helpers.js';
 import { CollegeType } from './college.zod.schemas.js';
 
 export const makeCollege = async (data: CollegeType & { userId: SUUID }) => {
@@ -12,21 +13,25 @@ export const makeCollege = async (data: CollegeType & { userId: SUUID }) => {
 		.values({ ...goodData, userId: convertToUUID(userId) })
 		.returning({ id: college.id });
 
-	const newCollegeWithSUUID = newCollege.map((college) => ({
+	const [newCollegeWithSUUID] = newCollege.map((college) => ({
 		...college,
 		id: convertToSUUID(college.id),
 	}));
 
-	return newCollegeWithSUUID[0];
+	return newCollegeWithSUUID;
 };
 
 export const updateCollegeById = async (
-	data: CollegeType & { id: SUUID; userId: SUUID; updatedAt: Date }
+	data: CollegeType & { id: SUUID; userId: SUUID }
 ) => {
 	const { id, userId, ...goodData } = data;
+
+	const isCollege = await collegeExists({ id });
+	if (!isCollege) throw Error('College does not exist', { cause: 404 });
+
 	const updatedCollege = await db
 		.update(college)
-		.set(goodData)
+		.set({ ...goodData, updatedAt: new Date() })
 		.where(
 			and(
 				eq(college.id, convertToUUID(id)),
@@ -35,16 +40,20 @@ export const updateCollegeById = async (
 		)
 		.returning({ id: college.id });
 
-	const updatedCollegeWithSUUID = updatedCollege.map((college) => ({
+	const [updatedCollegeWithSUUID] = updatedCollege.map((college) => ({
 		...college,
 		id: convertToSUUID(college.id),
 	}));
 
-	return updatedCollegeWithSUUID[0];
+	return updatedCollegeWithSUUID;
 };
 
 export const deleteCollegeById = async (data: { id: SUUID; userId: SUUID }) => {
 	const { id, userId } = data;
+
+	const isCollege = await collegeExists({ id });
+	if (!isCollege) throw Error('College does not exist', { cause: 404 });
+
 	const deletedCollege = await db
 		.delete(college)
 		.where(
@@ -55,19 +64,10 @@ export const deleteCollegeById = async (data: { id: SUUID; userId: SUUID }) => {
 		)
 		.returning({ id: college.id });
 
-	const deletedCollegeWithSUUID = deletedCollege.map((college) => ({
+	const [deletedCollegeWithSUUID] = deletedCollege.map((college) => ({
 		...college,
 		id: convertToSUUID(college.id),
 	}));
 
-	return deletedCollegeWithSUUID[0];
-};
-
-export const collegeExists = async (data: { id: SUUID }) => {
-	const collegeData = await db
-		.select({ name: college.name })
-		.from(college)
-		.where(eq(college.id, convertToUUID(data.id)));
-
-	return collegeData[0] ? true : false;
+	return deletedCollegeWithSUUID;
 };

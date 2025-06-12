@@ -2,7 +2,6 @@ import { validateSUUID } from '@/utils/general.utils.js';
 import { Request, Response } from 'express';
 import { SUUID } from 'short-uuid';
 import {
-	collegeExists,
 	deleteCollegeById,
 	makeCollege,
 	updateCollegeById,
@@ -24,12 +23,8 @@ export const updateCollege = async (
 	const { id } = req.params;
 	validateSUUID(id, 'college');
 
-	const isCollege = await collegeExists({ id });
-	if (!isCollege) throw Error('College does not exist', { cause: 404 });
-
 	const updatedCollege = await updateCollegeById({
 		...req.body,
-		updatedAt: new Date(),
 		id,
 		userId: req.userId as SUUID,
 	});
@@ -43,9 +38,6 @@ export const deleteCollege = async (
 ) => {
 	const { id } = req.params;
 	validateSUUID(id, 'college');
-
-	const isCollege = await collegeExists({ id });
-	if (!isCollege) throw Error('College does not exist', { cause: 404 });
 
 	await deleteCollegeById({ id, userId: req.userId as SUUID });
 

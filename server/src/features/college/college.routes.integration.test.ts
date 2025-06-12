@@ -18,7 +18,6 @@ import supertest from 'supertest';
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import { CollegeType } from './college.zod.schemas.js';
 
-// eslint-disable-next-line @typescript-eslint/no-misused-promises
 const api = supertest(app);
 const testUser = createTestUser();
 const testCollege = createTestCollege();
