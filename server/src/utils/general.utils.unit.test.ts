@@ -35,10 +35,11 @@ describe('General Utils Functions', () => {
 				}).not.toThrow();
 			});
 
+			// The idName for the test below is set to test which does not make sense (but needed for the test). Elsewhere in the codebase, actual idName like post, comment should be used
 			it('should throw Error for invalid SUUID', () => {
 				expect(() => {
-					validateSUUID('hello', 'function');
-				}).toThrow(Error('Valid id is required for function', { cause: 400 }));
+					validateSUUID('hello', 'test');
+				}).toThrow(Error('Valid id is required for test', { cause: 400 }));
 			});
 		});
 

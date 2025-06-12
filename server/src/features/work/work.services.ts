@@ -3,6 +3,7 @@ import { work } from '@/db/schema/index.js';
 import { convertToSUUID, convertToUUID } from '@/utils/general.utils.js';
 import { and, eq } from 'drizzle-orm';
 import { SUUID } from 'short-uuid';
+import { workExists } from './work.services.helpers.js';
 import { WorkType } from './work.zod.schemas.js';
 
 export const makeWork = async (data: WorkType & { userId: SUUID }) => {
@@ -12,21 +13,25 @@ export const makeWork = async (data: WorkType & { userId: SUUID }) => {
 		.values({ ...goodData, userId: convertToUUID(userId) })
 		.returning({ id: work.id });
 
-	const newWorkWithSUUID = newWork.map((work) => ({
+	const [newWorkWithSUUID] = newWork.map((work) => ({
 		...work,
 		id: convertToSUUID(work.id),
 	}));
 
-	return newWorkWithSUUID[0];
+	return newWorkWithSUUID;
 };
 
 export const updateWorkById = async (
-	data: WorkType & { id: SUUID; userId: SUUID; updatedAt: Date }
+	data: WorkType & { id: SUUID; userId: SUUID }
 ) => {
 	const { id, userId, ...goodData } = data;
+
+	const isWork = await workExists({ id });
+	if (!isWork) throw Error('Work does not exist', { cause: 404 });
+
 	const updatedWork = await db
 		.update(work)
-		.set(goodData)
+		.set({ ...goodData, updatedAt: new Date() })
 		.where(
 			and(
 				eq(work.id, convertToUUID(id)),
@@ -35,15 +40,18 @@ export const updateWorkById = async (
 		)
 		.returning({ id: work.id });
 
-	const updatedWorkWithSUUID = updatedWork.map((work) => ({
+	const [updatedWorkWithSUUID] = updatedWork.map((work) => ({
 		...work,
 		id: convertToSUUID(work.id),
 	}));
-	return updatedWorkWithSUUID[0];
+	return updatedWorkWithSUUID;
 };
 
 export const deleteWorkById = async (data: { id: SUUID; userId: SUUID }) => {
 	const { id, userId } = data;
+
+	const isWork = await workExists({ id });
+	if (!isWork) throw Error('Work does not exist', { cause: 404 });
 
 	const deletedWork = await db
 		.delete(work)
@@ -55,19 +63,10 @@ export const deleteWorkById = async (data: { id: SUUID; userId: SUUID }) => {
 		)
 		.returning({ id: work.id });
 
-	const deletedWorkWithSUUID = deletedWork.map((work) => ({
+	const [deletedWorkWithSUUID] = deletedWork.map((work) => ({
 		...work,
 		id: convertToSUUID(work.id),
 	}));
 
-	return deletedWorkWithSUUID[0];
-};
-
-export const workExists = async (data: { id: SUUID }) => {
-	const workData = await db
-		.select({ company: work.company })
-		.from(work)
-		.where(eq(work.id, convertToUUID(data.id)));
-
-	return workData[0] ? true : false;
+	return deletedWorkWithSUUID;
 };

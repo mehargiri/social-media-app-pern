@@ -26,7 +26,6 @@ const sampleHighschool = {
 	graduated: true,
 };
 
-// eslint-disable-next-line @typescript-eslint/no-misused-promises
 const api = supertest(app);
 
 const highschool400Errors: HTTPError400TestsType<HighschoolType>[] = [
