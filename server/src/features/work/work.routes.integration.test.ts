@@ -187,7 +187,7 @@ describe('Work Routes Integration Tests', () => {
 				.send(testWork)
 				.expect(400);
 
-			expect(response.body.error).toContain('Valid id is required');
+			expect(response.body.error).toEqual('Valid id is required for work');
 		});
 
 		it('should return HTTP 404 and a message when the work id is valid but does not exist', async () => {
@@ -197,7 +197,7 @@ describe('Work Routes Integration Tests', () => {
 				.send(testWork)
 				.expect(404);
 
-			expect(response.body.error).toContain('Work does not exist');
+			expect(response.body.error).toEqual('Work does not exist');
 		});
 
 		it.each(work400Errors)(
@@ -273,7 +273,7 @@ describe('Work Routes Integration Tests', () => {
 				.auth(authToken, { type: 'bearer' })
 				.expect(400);
 
-			expect(response.body.error).toContain('Valid id is required');
+			expect(response.body.error).toEqual('Valid id is required for work');
 		});
 
 		it('should return HTTP 404 and a message when the work id is valid but does not exist', async () => {
@@ -282,7 +282,7 @@ describe('Work Routes Integration Tests', () => {
 				.auth(authToken, { type: 'bearer' })
 				.expect(404);
 
-			expect(response.body.error).toContain('Work does not exist');
+			expect(response.body.error).toEqual('Work does not exist');
 		});
 
 		it('should return a message on success', async () => {
