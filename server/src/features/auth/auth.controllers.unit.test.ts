@@ -1,17 +1,6 @@
-import {
-	updateUserById,
-	userTokenExists,
-} from '@/features/user/user.services.js';
 import { sampleEmail, samplePassword } from '@/utils/test.utils.js';
 import { Response } from 'express';
-import { SUUID } from 'short-uuid';
 import { afterAll, beforeEach, describe, expect, it, Mock, vi } from 'vitest';
-import {
-	handleLoginRefreshTokenReuse,
-	handleRefreshTokenReuse,
-	processOldRefreshTokenForNew,
-	validateCredentials,
-} from './auth.controllers.helpers.js';
 import {
 	CookieType,
 	CustomCookieRequest,
@@ -21,42 +10,34 @@ import {
 	refreshToken,
 } from './auth.controllers.js';
 import {
+	loginUserService,
+	logoutUserService,
+	refreshTokenService,
+} from './auth.services.js';
+import {
 	clearRefreshTokenCookie,
-	generateTokens,
 	setRefreshTokenCookie,
 } from './auth.utils.js';
 
 describe('Authentication Controller Functions', () => {
-	vi.mock(import('./auth.utils.js'), async (importOriginal) => {
-		const actualModule = await importOriginal();
+	vi.mock('./auth.services.js', () => ({
+		loginUserService: vi.fn(),
+		logoutUserService: vi.fn(),
+		refreshTokenService: vi.fn(),
+	}));
+
+	vi.mock('./auth.utils.js', async (importOriginal) => {
+		const original = await importOriginal<typeof import('./auth.utils.js')>();
 		return {
-			...actualModule,
-			generateTokens: vi.fn(),
-			clearRefreshTokenCookie: vi.fn(),
+			...original,
 			setRefreshTokenCookie: vi.fn(),
+			clearRefreshTokenCookie: vi.fn(),
 		};
 	});
 
-	vi.mock('@/features/user/user.services.js', () => ({
-		userTokenExists: vi.fn(),
-		updateUserById: vi.fn(),
-	}));
-
-	vi.mock('./auth.controllers.helpers.js', () => ({
-		validateCredentials: vi.fn(),
-		handleLoginRefreshTokenReuse: vi.fn(),
-		processOldRefreshTokenForNew: vi.fn(),
-		handleRefreshTokenReuse: vi.fn(),
-	}));
-
-	const oldRefreshToken = 'refresh-token';
+	const oldRefreshToken = 'old-refresh-token';
+	const newRefreshToken = 'new-refresh-token';
 	const accessToken = 'access-token';
-	const tokenArray = ['old-random-token', oldRefreshToken];
-
-	const userData = {
-		id: 'random-id' as SUUID,
-		refreshToken: tokenArray,
-	};
 
 	const req = {
 		body: {
@@ -78,188 +59,161 @@ describe('Authentication Controller Functions', () => {
 	});
 
 	describe('loginUser function', () => {
-		const callTestFn = async () => {
+		const mockResolveLoginUserService = (clearRefreshTokenCookie: boolean) => {
+			(loginUserService as Mock).mockResolvedValue({
+				accessToken,
+				refreshToken: newRefreshToken,
+				shouldClearRefreshTokenCookie: clearRefreshTokenCookie,
+			});
+		};
+
+		beforeEach(() => {
+			vi.clearAllMocks();
+			mockResolveLoginUserService(false);
+		});
+
+		it('should call loginUserService with user email, password and refreshToken from req.cookies', async () => {
 			await loginUser(
 				req as unknown as CustomLoginRequest,
 				res as unknown as Response
 			);
-		};
 
-		beforeEach(() => {
-			(validateCredentials as Mock).mockResolvedValue(userData);
-			(handleLoginRefreshTokenReuse as Mock).mockResolvedValue(tokenArray);
-			(generateTokens as Mock).mockReturnValue({
-				accessToken,
-				refreshToken: oldRefreshToken,
-			});
-			vi.clearAllMocks();
-		});
-
-		it('should call validateCredentials with user email and user password', async () => {
-			await callTestFn();
-
-			expect(validateCredentials).toHaveBeenCalledWith(
-				req.body.email,
-				req.body.password
-			);
-		});
-
-		it('should call generateTokens function with user id', async () => {
-			await callTestFn();
-
-			expect(generateTokens).toHaveBeenCalledWith(userData.id);
-		});
-
-		it('should call handleLoginRefreshTokenReuse function with user, response, and refreshToken', async () => {
-			await callTestFn();
-
-			expect(handleLoginRefreshTokenReuse).toHaveBeenCalledWith(
-				userData,
-				res,
-				req.cookies.tk
-			);
-		});
-
-		it('should update user with new refreshToken Array', async () => {
-			await callTestFn();
-
-			expect(updateUserById).toHaveBeenCalledWith({
-				id: userData.id,
-				refreshToken: [...tokenArray, oldRefreshToken],
+			expect(loginUserService).toHaveBeenCalledWith({
+				email: req.body.email,
+				password: req.body.password,
+				oldRefreshToken: req.cookies.tk,
 			});
 		});
 
-		it('should set new refreshToken as cookie and call res.json with accessToken', async () => {
-			await callTestFn();
+		it('should call clearRefreshTokenCookie when shouldClearRefreshTokenCookie is true', async () => {
+			mockResolveLoginUserService(true);
 
-			expect(setRefreshTokenCookie).toHaveBeenCalledWith(res, oldRefreshToken);
+			await loginUser(
+				req as unknown as CustomLoginRequest,
+				res as unknown as Response
+			);
+
+			expect(clearRefreshTokenCookie).toHaveBeenCalledOnce();
+			expect(clearRefreshTokenCookie).toHaveBeenCalledWith(res);
+		});
+
+		it('should not call clearRefreshTokenCookie when shouldClearRefreshTokenCookie is false', async () => {
+			await loginUser(
+				req as unknown as CustomLoginRequest,
+				res as unknown as Response
+			);
+
+			expect(clearRefreshTokenCookie).not.toHaveBeenCalled();
+		});
+
+		it('should call setRefreshTokenCookie with new refresh token cookie on successful login', async () => {
+			await loginUser(
+				req as unknown as CustomLoginRequest,
+				res as unknown as Response
+			);
+
+			expect(setRefreshTokenCookie).toHaveBeenCalledOnce();
+			expect(setRefreshTokenCookie).toHaveBeenCalledWith(res, newRefreshToken);
+		});
+
+		it('should call res.json with accessToken on successful login', async () => {
+			await loginUser(
+				req as unknown as CustomLoginRequest,
+				res as unknown as Response
+			);
+
 			expect(res.json).toHaveBeenCalledWith({ accessToken });
 		});
 	});
 
 	describe('logoutUser function', () => {
-		const callTestFn = async () => {
+		it('should call res.sendStatus with HTTP 204 if refreshToken is missing from cookies', async () => {
+			req.cookies.tk = undefined;
+
 			await logoutUser(
 				req as unknown as CustomCookieRequest,
 				res as unknown as Response
 			);
-		};
 
-		beforeEach(() => {
+			expect(res.sendStatus).toHaveBeenCalledWith(204);
+
 			req.cookies.tk = oldRefreshToken;
-			(updateUserById as Mock).mockResolvedValue({ id: userData.id });
-			vi.clearAllMocks();
 		});
 
-		it('should call res.sendStatus with HTTP 204 when there is not refreshToken', async () => {
-			req.cookies.tk = undefined;
+		it('should call logoutUserService with the refreshToken from cookies', async () => {
+			await logoutUser(
+				req as unknown as CustomCookieRequest,
+				res as unknown as Response
+			);
 
-			await callTestFn();
-
-			expect(res.sendStatus).toHaveBeenCalledWith(204);
-		});
-
-		it('should clear refresh token cookie when refresh token is not present in user record', async () => {
-			await callTestFn();
-
-			expect(clearRefreshTokenCookie).toHaveBeenCalledWith(res);
-		});
-
-		it('should call res.sendStatus with HTTP 204 when refresh token is not present in user record', async () => {
-			await callTestFn();
-
-			expect(res.sendStatus).toHaveBeenCalledWith(204);
-		});
-
-		it('should clear refresh token from user record if the refresh token is present in the user record', async () => {
-			(userTokenExists as Mock).mockResolvedValue(userData);
-
-			await callTestFn();
-
-			expect(updateUserById).toHaveBeenCalledWith({
-				id: userData.id,
-				refreshToken: ['old-random-token'],
+			expect(logoutUserService).toHaveBeenCalledWith({
+				refreshToken: oldRefreshToken,
 			});
 		});
 
 		it('should clear refresh token cookie', async () => {
-			(userTokenExists as Mock).mockResolvedValue(userData);
-			await callTestFn();
+			await logoutUser(
+				req as unknown as CustomCookieRequest,
+				res as unknown as Response
+			);
 
 			expect(clearRefreshTokenCookie).toHaveBeenCalledWith(res);
 		});
 
-		it('should call res.sendStatus with HTTP 204', async () => {
-			(userTokenExists as Mock).mockResolvedValue(userData);
-			await callTestFn();
+		it('should call res.sendStatus with HTTP 204 on successful logout', async () => {
+			await logoutUser(
+				req as unknown as CustomCookieRequest,
+				res as unknown as Response
+			);
 
 			expect(res.sendStatus).toHaveBeenCalledWith(204);
 		});
 	});
 
 	describe('refreshToken function', () => {
-		const callTestFn = async () => {
+		beforeEach(() => {
+			(refreshTokenService as Mock).mockResolvedValue({
+				accessToken,
+				newRefreshToken,
+			});
+		});
+
+		it('should clear the existing refresh token cookie', async () => {
 			await refreshToken(
 				req as unknown as CustomCookieRequest,
 				res as unknown as Response
 			);
-		};
-
-		beforeEach(() => {
-			req.cookies.tk = oldRefreshToken;
-			vi.resetAllMocks();
-		});
-
-		it('should throw Error with 401 as the cause when there is no refresh token', async () => {
-			req.cookies.tk = undefined;
-
-			try {
-				await callTestFn();
-			} catch (error) {
-				expect(error).toStrictEqual(Error('', { cause: 401 }));
-			}
-		});
-
-		it('should clear refresh token cookie if it exists', async () => {
-			(userTokenExists as Mock).mockResolvedValue(true);
-
-			await callTestFn();
 
 			expect(clearRefreshTokenCookie).toHaveBeenCalledWith(res);
 		});
 
-		it('should call handleRefreshTokenReuse function with the refresh token cookie when refresh token cannot be found in the user record', async () => {
-			try {
-				await callTestFn();
-			} catch (error) {
-				expect(error).toBeDefined();
-			}
-
-			expect(handleRefreshTokenReuse).toHaveBeenCalledWith(
-				oldRefreshToken,
-				res
+		it('should call refreshTokenService with the current refresh token from cookies', async () => {
+			await refreshToken(
+				req as unknown as CustomCookieRequest,
+				res as unknown as Response
 			);
+
+			expect(refreshTokenService).toHaveBeenCalledWith({
+				refreshToken: oldRefreshToken,
+			});
 		});
 
-		it('should throw Error with 403 as the cause when refresh token cannot be found in the user record', async () => {
-			try {
-				await callTestFn();
-			} catch (error) {
-				expect(error).toStrictEqual(Error('', { cause: 403 }));
-			}
+		it('should set a new refresh token cookie with newRefreshToken from refreshTokenService', async () => {
+			await refreshToken(
+				req as unknown as CustomCookieRequest,
+				res as unknown as Response
+			);
+
+			expect(setRefreshTokenCookie).toHaveBeenCalledWith(res, newRefreshToken);
 		});
 
-		it('should call processOldRefreshTokenForNew function with user, refreshToken cookie, refreshToken array and response', async () => {
-			(userTokenExists as Mock).mockResolvedValue(userData);
-
-			await callTestFn();
-
-			expect(processOldRefreshTokenForNew).toHaveBeenCalledWith(
-				userData,
-				oldRefreshToken,
-				['old-random-token'],
-				res
+		it('should call res.json with accessToken from refreshTokenService', async () => {
+			await refreshToken(
+				req as unknown as CustomCookieRequest,
+				res as unknown as Response
 			);
+
+			expect(res.json).toHaveBeenCalledWith({ accessToken });
 		});
 	});
 });
