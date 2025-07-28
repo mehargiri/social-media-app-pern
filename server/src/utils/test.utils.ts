@@ -1,5 +1,6 @@
 import { db } from '@/db/index.js';
 import { collegeTypeEnum } from '@/db/schema/college.js';
+import { likeTypesEnum } from '@/db/schema/like.js';
 import { user, userGenderEnum } from '@/db/schema/user.js';
 import { CollegeType } from '@/features/college/college.zod.schemas.js';
 import { CommentType } from '@/features/comment/comment.zod.schemas.js';
@@ -133,21 +134,68 @@ export const createTestPost = (): PostType & { userId: string } => ({
 	assets: [faker.image.urlPicsumPhotos()],
 });
 
-export const createTestComment = (): Omit<CommentType, 'commentLevel'> & {
-	userId: string;
+export const createTestComment = (): CommentType & {
+	userId: SUUID;
 } => ({
 	content: faker.word.words({ count: { min: 10, max: 20 } }),
 	postId: '' as SUUID,
 	parentCommentId: null,
-	userId: '',
+	userId: '' as SUUID,
+});
+
+export const createTestCommentForSelect = (): CommentType & {
+	userId: SUUID | null;
+	likesCount: number;
+	topLikeType1: string;
+	topLikeType2: string;
+	repliesCount: number;
+	fullName: string | null;
+	profilePic: string | null;
+} => ({
+	content: faker.word.words({ count: { min: 10, max: 20 } }),
+	postId: '' as SUUID,
+	parentCommentId: null,
+	userId: '' as SUUID,
+	likesCount: faker.number.int(1000),
+	topLikeType1: faker.helpers.arrayElement(likeTypesEnum.enumValues),
+	topLikeType2: faker.helpers.arrayElement(likeTypesEnum.enumValues),
+	repliesCount: 0,
+	fullName: faker.person.fullName(),
+	profilePic: faker.image.avatar(),
 });
 
 export const createTestReply = (data: {
 	commentLevel: number;
-}): CommentType & { userId: string } => ({
+}): CommentType & {
+	userId: SUUID;
+} => ({
 	content: faker.word.words({ count: { min: 10, max: 20 } }),
 	commentLevel: data.commentLevel,
 	postId: '' as SUUID,
 	parentCommentId: '' as SUUID,
-	userId: '',
+	userId: '' as SUUID,
+});
+
+export const createTestReplyForSelect = (data: {
+	commentLevel: number;
+}): CommentType & {
+	userId: SUUID;
+	likesCount: number;
+	topLikeType1: string;
+	topLikeType2: string;
+	repliesCount: number;
+	fullName: string | null;
+	profilePic: string | null;
+} => ({
+	content: faker.word.words({ count: { min: 10, max: 20 } }),
+	commentLevel: data.commentLevel,
+	postId: '' as SUUID,
+	parentCommentId: '' as SUUID,
+	userId: '' as SUUID,
+	likesCount: faker.number.int(1000),
+	topLikeType1: faker.helpers.arrayElement(likeTypesEnum.enumValues),
+	topLikeType2: faker.helpers.arrayElement(likeTypesEnum.enumValues),
+	repliesCount: 0,
+	fullName: faker.person.fullName(),
+	profilePic: faker.image.avatar(),
 });

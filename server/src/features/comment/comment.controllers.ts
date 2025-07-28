@@ -1,14 +1,15 @@
-import { validateSUUID } from '@/utils/general.utils.js';
+import {
+	getCursorPaginatedData,
+	validateSUUID,
+} from '@/utils/general.utils.js';
 import { Request, Response } from 'express';
 import { SUUID } from 'short-uuid';
 import {
-	commentExists,
 	deleteCommentById,
 	findComments,
 	findReplies,
 	makeComment,
 	updateCommentById,
-	updateParentCommentReplyCount,
 } from './comment.services.js';
 import { CommentType, UpdateCommentType } from './comment.zod.schemas.js';
 
@@ -21,23 +22,16 @@ export const getComments = async (
 	}>
 ) => {
 	const { postId } = req.params;
-	const { cursor } = req.query;
 	validateSUUID(postId, 'post');
+	const { cursor } = req.query;
 
-	const decodedCursor = cursor
-		? Buffer.from(cursor, 'base64url').toString()
-		: undefined;
+	const { data: comments, nextCursor } = await getCursorPaginatedData(
+		findComments,
+		{ postId },
+		cursor
+	);
 
-	const totalComments = await findComments({ postId, cursor: decodedCursor });
-
-	const lastCommentDate =
-		totalComments[totalComments.length - 1]?.createdAt.toISOString();
-
-	const nextCursor = lastCommentDate
-		? Buffer.from(lastCommentDate).toString('base64url')
-		: null;
-
-	return void res.json({ comments: totalComments, nextCursor });
+	return void res.json({ comments, nextCursor });
 };
 
 export const getReplies = async (
@@ -51,23 +45,13 @@ export const getReplies = async (
 	const { cursor } = req.query;
 	validateSUUID(parentCommentId, 'parent comment');
 
-	const decodedCursor = cursor
-		? Buffer.from(cursor, 'base64url').toString()
-		: undefined;
+	const { data: replies, nextCursor } = await getCursorPaginatedData(
+		findReplies,
+		{ parentCommentId },
+		cursor
+	);
 
-	const totalReplies = await findReplies({
-		parentCommentId,
-		cursor: decodedCursor,
-	});
-
-	const lastReplyDate =
-		totalReplies[totalReplies.length - 1]?.createdAt.toISOString();
-
-	const nextCursor = lastReplyDate
-		? Buffer.from(lastReplyDate).toString('base64url')
-		: null;
-
-	return void res.json({ replies: totalReplies, nextCursor });
+	return void res.json({ replies, nextCursor });
 };
 
 // Create Comment
@@ -76,12 +60,6 @@ export const createComment = async (
 	res: Response
 ) => {
 	const { parentCommentId, commentLevel, ...goodData } = req.body;
-	if (parentCommentId && commentLevel === 0) {
-		throw Error(
-			'Comment level has to be greater than 0 if parent comment id is present',
-			{ cause: 400 }
-		);
-	}
 
 	await makeComment({
 		...goodData,
@@ -89,16 +67,6 @@ export const createComment = async (
 		commentLevel,
 		userId: req.userId as SUUID,
 	});
-
-	// Reply is created if parentCommentId is present
-	// Otherwise top level comment is created
-	if (parentCommentId) {
-		// Need to update the replies count of the parent comment
-		await updateParentCommentReplyCount({
-			id: parentCommentId,
-			type: 'increase',
-		});
-	}
 
 	return void res.sendStatus(201);
 };
@@ -111,14 +79,10 @@ export const updateComment = async (
 	const { id } = req.params;
 	validateSUUID(id, 'comment');
 
-	const isComment = await commentExists({ id });
-	if (!isComment) throw Error('Comment does not exist', { cause: 404 });
-
 	const updatedComment = await updateCommentById({
 		...req.body,
 		id,
 		userId: req.userId as SUUID,
-		updatedAt: new Date(),
 	});
 
 	return void res.json(updatedComment);
@@ -132,16 +96,10 @@ export const deleteComment = async (
 	const { id } = req.params;
 	validateSUUID(id, 'comment');
 
-	const isComment = await commentExists({ id });
-	if (!isComment) throw Error('Comment does not exist', { cause: 404 });
+	const result = await deleteCommentById({ id, userId: req.userId as SUUID });
 
-	await deleteCommentById({ id, userId: req.userId as SUUID });
-
-	if (isComment.parentCommentId) {
-		await updateParentCommentReplyCount({
-			id: isComment.parentCommentId,
-			type: 'decrease',
-		});
+	if (result?.isReply) {
+		return void res.json({ message: 'Reply deleted successfully' });
 	}
 
 	return void res.json({ message: 'Comment deleted successfully' });

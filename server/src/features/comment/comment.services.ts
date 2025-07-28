@@ -8,6 +8,10 @@ import {
 import { convertToSUUID, convertToUUID } from '@/utils/general.utils.js';
 import { and, desc, eq, lt } from 'drizzle-orm';
 import { SUUID } from 'short-uuid';
+import {
+	commentExists,
+	updateParentCommentReplyCount,
+} from './comment.services.helpers.js';
 
 // Read Comments
 export const findComments = async (data: {
@@ -109,34 +113,64 @@ export const findReplies = async (data: {
 
 // Create Comment
 export const makeComment = async (data: CommentType & { userId: SUUID }) => {
-	const { userId, postId, parentCommentId, ...goodData } = data;
+	const { userId, postId, parentCommentId, commentLevel, ...goodData } = data;
 
-	const newComment = await db
-		.insert(comment)
-		.values({
-			...goodData,
-			userId: convertToUUID(userId),
-			postId: convertToUUID(postId),
-			parentCommentId: parentCommentId ? convertToUUID(parentCommentId) : null,
-		})
-		.returning({ id: comment.id });
+	if (parentCommentId && commentLevel === 0) {
+		throw Error(
+			'Comment level has to be greater than 0 if parent comment id is present',
+			{ cause: 400 }
+		);
+	}
 
-	const newCommentWithSUUID = newComment.map((comment) => ({
+	const newComment = await db.transaction(async (tx) => {
+		const newComment = await tx
+			.insert(comment)
+			.values({
+				...goodData,
+				commentLevel,
+				userId: convertToUUID(userId),
+				postId: convertToUUID(postId),
+				parentCommentId: parentCommentId
+					? convertToUUID(parentCommentId)
+					: null,
+			})
+			.returning({ id: comment.id });
+
+		// Reply is created if parentCommentId is present
+		// Otherwise top level comment is created
+		if (parentCommentId) {
+			// Need to update the replies count of the parent comment
+			await updateParentCommentReplyCount(
+				{
+					id: parentCommentId,
+					type: 'increase',
+				},
+				tx
+			);
+		}
+
+		return newComment;
+	});
+
+	const [newCommentWithSUUID] = newComment.map((comment) => ({
 		...comment,
 		id: convertToSUUID(comment.id),
 	}));
 
-	return newCommentWithSUUID[0];
+	return newCommentWithSUUID;
 };
 
 // Update Comment
 export const updateCommentById = async (
-	data: UpdateCommentType & { id: SUUID; userId: SUUID; updatedAt: Date }
+	data: UpdateCommentType & { id: SUUID; userId: SUUID }
 ) => {
 	const { id, userId, ...goodData } = data;
+	const isComment = await commentExists({ id });
+	if (!isComment) throw Error('Comment does not exist', { cause: 404 });
+
 	const updatedComment = await db
 		.update(comment)
-		.set(goodData)
+		.set({ ...goodData, updatedAt: new Date() })
 		.where(
 			and(
 				eq(comment.id, convertToUUID(id)),
@@ -145,79 +179,50 @@ export const updateCommentById = async (
 		)
 		.returning({ id: comment.id });
 
-	const updatedCommentWithSUUID = updatedComment.map((comment) => ({
+	const [updatedCommentWithSUUID] = updatedComment.map((comment) => ({
 		...comment,
 		id: convertToSUUID(comment.id),
 	}));
 
-	return updatedCommentWithSUUID[0];
+	return updatedCommentWithSUUID;
 };
 
 // Delete Comment
 export const deleteCommentById = async (data: { id: SUUID; userId: SUUID }) => {
 	const { id, userId } = data;
-	const deletedComment = await db
-		.delete(comment)
-		.where(
-			and(
-				eq(comment.id, convertToUUID(id)),
-				eq(comment.userId, convertToUUID(userId))
-			)
-		)
-		.returning({ id: comment.id });
 
-	const deletedCommentWithSUUID = deletedComment.map((comment) => ({
+	const isComment = await commentExists({ id });
+	if (!isComment) throw Error('Comment does not exist', { cause: 404 });
+
+	const deletedComment = await db.transaction(async (tx) => {
+		const deletedComment = await tx
+			.delete(comment)
+			.where(
+				and(
+					eq(comment.id, convertToUUID(id)),
+					eq(comment.userId, convertToUUID(userId))
+				)
+			)
+			.returning({ id: comment.id });
+
+		if (isComment.parentCommentId) {
+			await updateParentCommentReplyCount(
+				{
+					id: isComment.parentCommentId,
+					type: 'decrease',
+				},
+				tx
+			);
+		}
+
+		return deletedComment;
+	});
+
+	const [deletedCommentWithSUUID] = deletedComment.map((comment) => ({
 		...comment,
 		id: convertToSUUID(comment.id),
+		isReply: isComment.parentCommentId != null,
 	}));
 
-	return deletedCommentWithSUUID[0];
-};
-
-export const commentExists = async (data: { id: SUUID }) => {
-	const isComment = await db
-		.select({
-			content: comment.content,
-			parentCommentId: comment.parentCommentId,
-		})
-		.from(comment)
-		.where(eq(comment.id, convertToUUID(data.id)));
-
-	const [isCommentWithSUUID] = isComment.map((comment) => ({
-		...comment,
-		parentCommentId: comment.parentCommentId
-			? convertToSUUID(comment.parentCommentId)
-			: null,
-	}));
-	return isCommentWithSUUID;
-};
-
-export const updateParentCommentReplyCount = async (data: {
-	id: SUUID;
-	type: 'increase' | 'decrease';
-}) => {
-	const { id, type } = data;
-	const currentParentCommentReplyCount = await getCommentRepliesCount({ id });
-
-	if (currentParentCommentReplyCount) {
-		await db
-			.update(comment)
-			.set({
-				repliesCount:
-					type === 'increase'
-						? currentParentCommentReplyCount.repliesCount + 1
-						: currentParentCommentReplyCount.repliesCount - 1,
-			})
-			.where(eq(comment.id, convertToUUID(id)));
-	}
-};
-
-export const getCommentRepliesCount = async (data: { id: SUUID }) => {
-	const { id } = data;
-	const [selectedComment] = await db
-		.select({ repliesCount: comment.repliesCount })
-		.from(comment)
-		.where(eq(comment.id, convertToUUID(id)));
-
-	return selectedComment;
+	return deletedCommentWithSUUID;
 };

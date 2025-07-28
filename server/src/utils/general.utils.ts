@@ -1,8 +1,47 @@
+import { db } from '@/db/index.js';
 import { Request } from 'express';
 import { mkdirSync } from 'fs';
 import multer, { FileFilterCallback, MulterError } from 'multer';
 import path from 'path';
 import short, { SUUID } from 'short-uuid';
+
+// Cursor Pagination
+export type FetchFunction<T, A> = (args: A) => Promise<T[]>;
+
+export const getCursorPaginatedData = async <
+	T extends { createdAt: Date },
+	A extends Record<string, unknown>
+>(
+	fetchFn: FetchFunction<T, A>,
+	fetchArgs: A,
+	cursor?: string
+) => {
+	let decodedCursor: string | undefined;
+
+	if (cursor) {
+		try {
+			decodedCursor = Buffer.from(cursor, 'base64url').toString();
+			// eslint-disable-next-line @typescript-eslint/no-unused-vars
+		} catch (err) {
+			decodedCursor = undefined;
+		}
+	}
+
+	const data = await fetchFn({ ...fetchArgs, cursor: decodedCursor });
+
+	const lastItemDate = data[data.length - 1]?.createdAt.toISOString();
+
+	const nextCursor = lastItemDate
+		? Buffer.from(lastItemDate).toString('base64url')
+		: null;
+
+	return { data, nextCursor };
+};
+
+// This custom type is for the transaction database context present inside Drizzle's db.transaction function
+export type TransactionType = Parameters<
+	Parameters<typeof db.transaction>[0]
+>[0];
 
 // UUID Conversions
 const translator = short();
