@@ -20,14 +20,20 @@ import { generate, SUUID } from 'short-uuid';
 import supertest from 'supertest';
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import { getComments } from './comment.controllers.js';
-import {
-	getParentCommentReplyCount,
-	getPostCommentsCount,
-} from './comment.services.js';
 import { CommentType } from './comment.zod.schemas.js';
 
 const testReplyLevel1 = createTestReply({ commentLevel: 1 });
 const testReplyLevel2 = createTestReply({ commentLevel: 2 });
+
+const getCommentRepliesCount = async (data: { id: SUUID }) => {
+	const { id } = data;
+	const [selectedComment] = await db
+		.select({ repliesCount: comment.repliesCount })
+		.from(comment)
+		.where(eq(comment.id, convertToUUID(id)));
+
+	return selectedComment;
+};
 
 const api = supertest(app);
 const testPost = createTestPost();
@@ -101,7 +107,8 @@ describe('Comment Routes Integration Tests', () => {
 	let testPostSUUID: SUUID,
 		testUserSUUID: SUUID,
 		testParentCommentSUUID: SUUID,
-		testParentReplySUUID: SUUID;
+		testParentReplySUUID: SUUID,
+		testAnotherParentReplySUUID: SUUID;
 
 	beforeAll(async () => {
 		const [testUserId] = await db
@@ -119,8 +126,9 @@ describe('Comment Routes Integration Tests', () => {
 		testPostSUUID = convertToSUUID(testPostId?.id ?? '');
 
 		testComments.forEach((comment) => {
-			comment.userId = testUserId?.id ?? '';
+			comment.userId = (testUserId?.id ?? '') as unknown as SUUID;
 			// testPostId.id is of string type and the testComments.postId should be of type string in order to add into the database. So, the unknown type assertion is needed in this case. Usually this is not recommended.
+			// Similar thing for userId too
 			comment.postId = (testPostId?.id ?? '') as unknown as SUUID;
 		});
 
@@ -150,6 +158,20 @@ describe('Comment Routes Integration Tests', () => {
 			.returning({ id: comment.id });
 
 		testParentReplySUUID = convertToSUUID(testReplyId[0]?.id ?? '');
+
+		const testAnotherReplyId = await db
+			.insert(comment)
+			.values({
+				...testReplyLevel1,
+				postId: testPostId?.id ?? '',
+				userId: testUserId?.id ?? '',
+				parentCommentId: testCommentId?.id,
+			})
+			.returning({ id: comment.id });
+
+		testAnotherParentReplySUUID = convertToSUUID(
+			testAnotherReplyId[0]?.id ?? ''
+		);
 
 		await db
 			.update(post)
@@ -190,7 +212,7 @@ describe('Comment Routes Integration Tests', () => {
 			otherTestPostSUUID = convertToSUUID(otherTestPostId?.id ?? '');
 
 			otherTestComments.forEach((comment) => {
-				comment.userId = otherTestUserId?.id ?? '';
+				comment.userId = (otherTestUserId?.id ?? '') as unknown as SUUID;
 				comment.postId = (otherTestPostId?.id ?? '') as unknown as SUUID;
 			});
 
@@ -202,11 +224,26 @@ describe('Comment Routes Integration Tests', () => {
 			vi.useRealTimers();
 		});
 
-		type getCommentsResponse = SuperTestResponse<
+		type GetCommentsResponse = SuperTestResponse<
 			ExtractResponseBody<Parameters<typeof getComments>['1']>
 		>;
 
-		it('should return HTTP 401 when the route is accessed without login', async () => {
+		const requiredProps = [
+			'id',
+			'postId',
+			'content',
+			'likesCount',
+			'topLikeType1',
+			'topLikeType2',
+			'repliesCount',
+			'createdAt',
+			'updatedAt',
+			'profilePic',
+			'fullName',
+			'userId',
+		];
+
+		it('should return HTTP 401 when the route is accessed without authentication', async () => {
 			await api.get(testUrl).expect(401);
 		});
 
@@ -228,34 +265,18 @@ describe('Comment Routes Integration Tests', () => {
 			expect(response.body.error).toEqual('Valid id is required for post');
 		});
 
-		it('should return total 5 comments with id, postId, content, likesCount, topLikeType1, topLikeType2, repliesCount, createdAt, updatedAt, user fullName, user profilePic along with a nextCursor value when a query params of postId is only passed. should return the next 5 comments that was created before the cursor value with id, postId, content, likesCount, topLikeType1, topLikeType2, repliesCount, createdAt, updatedAt, user fullName, user profilePic along with a nextCursor value when query params of postId and cursor is passed. should return comments that belong to a single post. should return only the top level comments', async () => {
+		it('should return first 5 comments with required properties', async () => {
 			vi.stubEnv('NODE_ENV', 'test');
-			const requiredPropsComment = [
-				'id',
-				'postId',
-				'content',
-				'likesCount',
-				'topLikeType1',
-				'topLikeType2',
-				'repliesCount',
-				'createdAt',
-				'updatedAt',
-				'profilePic',
-				'fullName',
-				'userId',
-			];
 
-			const response: getCommentsResponse = await api
+			const response: GetCommentsResponse = await api
 				.get(testUrl)
 				.auth(authToken, { type: 'bearer' })
 				.expect(200);
 
-			const cursor = response.body.nextCursor ?? '';
-
 			expect(response.body.nextCursor).not.toBeNull();
 			expect(response.body.comments).toHaveLength(5);
 
-			requiredPropsComment.forEach((prop) => {
+			requiredProps.forEach((prop) => {
 				expect(response.body.comments[0]).toHaveProperty(prop);
 			});
 
@@ -264,7 +285,20 @@ describe('Comment Routes Integration Tests', () => {
 				expect(comment.commentLevel).toEqual(0);
 			});
 
-			const cursorResponse: getCommentsResponse = await api
+			vi.unstubAllEnvs();
+		});
+
+		it('should return next 5 comments when cursor is provided', async () => {
+			vi.stubEnv('NODE_ENV', 'test');
+
+			const firstResponse: GetCommentsResponse = await api
+				.get(testUrl)
+				.auth(authToken, { type: 'bearer' })
+				.expect(200);
+
+			const cursor = firstResponse.body.nextCursor ?? '';
+
+			const cursorResponse: GetCommentsResponse = await api
 				.get(`${testUrl}?cursor=${cursor}`)
 				.auth(authToken, { type: 'bearer' })
 				.expect(200);
@@ -279,7 +313,7 @@ describe('Comment Routes Integration Tests', () => {
 				new Date(cursorResponse.body.comments[0]?.createdAt ?? '').getTime()
 			).toBeLessThan(decodedCursorTime);
 
-			requiredPropsComment.forEach((prop) => {
+			requiredProps.forEach((prop) => {
 				expect(cursorResponse.body.comments[0]).toHaveProperty(prop);
 			});
 
@@ -293,7 +327,7 @@ describe('Comment Routes Integration Tests', () => {
 	});
 
 	describe('Create comments route (POST)', () => {
-		it('should return HTTP 401 when the route is accessed without login', async () => {
+		it('should return HTTP 401 when the route is accessed without authentication', async () => {
 			await api.post(testUrlBase).expect(401);
 		});
 
@@ -328,7 +362,7 @@ describe('Comment Routes Integration Tests', () => {
 			}
 		);
 
-		it('should return HTTP 400 when a reply has a commentLevel of 0', async () => {
+		it('should return HTTP 400 when a reply has a commentLevel of 0 with parentCommentId', async () => {
 			testReplyLevel1.postId = testPostSUUID;
 			testReplyLevel1.userId = testUserSUUID;
 			testReplyLevel1.parentCommentId = testParentCommentSUUID;
@@ -347,34 +381,7 @@ describe('Comment Routes Integration Tests', () => {
 			);
 		});
 
-		it('should return HTTP 500, a message and rollback comment creation if an error occurs', async () => {
-			const response: ResponseWithError = await api
-				.post(testUrlBase)
-				.auth(authToken, { type: 'bearer' })
-				.send({
-					...testComments[0],
-					postId: testPostSUUID,
-					userId: 'random',
-					forceError: true,
-				})
-				.expect(500);
-
-			expect(response.body.error).toEqual(
-				'Forced transaction error for comment creation'
-			);
-
-			const totalComments = await db
-				.select({ id: comment.id })
-				.from(comment)
-				.where(eq(comment.postId, convertToUUID(testPostSUUID)));
-
-			expect(totalComments).toHaveLength(11);
-
-			const postData = await getPostCommentsCount({ id: testPostSUUID });
-			expect(postData?.commentsCount).toEqual(11);
-		});
-
-		it('should return HTTP 201 on successful comment creation. Post should have the comment count of 12.', async () => {
+		it('should return HTTP 201 when creating top level comment', async () => {
 			await api
 				.post(testUrlBase)
 				.auth(authToken, { type: 'bearer' })
@@ -384,26 +391,26 @@ describe('Comment Routes Integration Tests', () => {
 					userId: testUserSUUID,
 				})
 				.expect(201);
-
-			const postData = await getPostCommentsCount({ id: testPostSUUID });
-			expect(postData?.commentsCount).toEqual(12);
-
-			// Delete the newly created comment and update the post comment count
-			const comments = await db
-				.select({ id: comment.id })
-				.from(comment)
-				.where(eq(comment.postId, convertToUUID(testPostSUUID)))
-				.orderBy(comment.createdAt)
-				.limit(2);
-
-			await db.delete(comment).where(eq(comment.id, comments.at(1)?.id ?? ''));
-			await db
-				.update(post)
-				.set({ commentsCount: 11 })
-				.where(eq(post.id, convertToUUID(testPostSUUID)));
 		});
 
-		it('should return HTTP 201 on successful creation of reply with commentLevel of 1. Parent comment should have a reply count of 2. Post should have the comment count of 12.', async () => {
+		it('should return HTTP 201 when creating a level 1 reply', async () => {
+			await api
+				.post(testUrlBase)
+				.auth(authToken, { type: 'bearer' })
+				.send({
+					...testReplyLevel1,
+					postId: testPostSUUID,
+					userId: testUserSUUID,
+					parentCommentId: testParentCommentSUUID,
+				})
+				.expect(201);
+		});
+
+		it('should increment parent comment reply count when creating a level 1 reply', async () => {
+			const initialReplyCount = await getCommentRepliesCount({
+				id: testParentCommentSUUID,
+			});
+
 			await api
 				.post(testUrlBase)
 				.auth(authToken, { type: 'bearer' })
@@ -415,39 +422,16 @@ describe('Comment Routes Integration Tests', () => {
 				})
 				.expect(201);
 
-			const parentCommentData = await getParentCommentReplyCount({
+			const updatedReplyCount = await getCommentRepliesCount({
 				id: testParentCommentSUUID,
 			});
 
-			const postData = await getPostCommentsCount({ id: testPostSUUID });
-
-			expect(postData?.commentsCount).toEqual(12);
-			expect(parentCommentData?.repliesCount).toEqual(2);
-
-			// Delete the newly created reply and update repliesCount to 1
-			const replies = await db
-				.select({
-					id: comment.id,
-				})
-				.from(comment)
-				.where(
-					eq(comment.parentCommentId, convertToUUID(testParentCommentSUUID))
-				)
-				.orderBy(comment.createdAt)
-				.limit(2);
-
-			await db.delete(comment).where(eq(comment.id, replies.at(1)?.id ?? ''));
-			await db
-				.update(comment)
-				.set({ repliesCount: 1 })
-				.where(eq(comment.id, convertToUUID(testParentCommentSUUID)));
-			await db
-				.update(post)
-				.set({ commentsCount: 11 })
-				.where(eq(post.id, convertToUUID(testPostSUUID)));
+			expect(updatedReplyCount?.repliesCount).toEqual(
+				(initialReplyCount?.repliesCount ?? 0) + 1
+			);
 		});
 
-		it('should return HTTP 201 on successful creation of reply with commentLevel of 2. Parent comment should have a reply count of 1. Post comment should have comment count of 12.', async () => {
+		it('should return HTTP 201 when creating a level 2 reply', async () => {
 			await api
 				.post(testUrlBase)
 				.auth(authToken, { type: 'bearer' })
@@ -458,29 +442,30 @@ describe('Comment Routes Integration Tests', () => {
 					parentCommentId: testParentReplySUUID,
 				})
 				.expect(201);
+		});
 
-			const parentCommentData = await getParentCommentReplyCount({
+		it('should increment parent reply count when creating a level 2 reply', async () => {
+			const initialReplyCount = await getCommentRepliesCount({
 				id: testParentReplySUUID,
 			});
 
-			const postData = await getPostCommentsCount({ id: testPostSUUID });
+			await api
+				.post(testUrlBase)
+				.auth(authToken, { type: 'bearer' })
+				.send({
+					...testReplyLevel2,
+					postId: testPostSUUID,
+					userId: testUserSUUID,
+					parentCommentId: testParentReplySUUID,
+				});
 
-			expect(postData?.commentsCount).toEqual(12);
-			expect(parentCommentData?.repliesCount).toEqual(1);
+			const updatedReplyCount = await getCommentRepliesCount({
+				id: testParentReplySUUID,
+			});
 
-			// Delete the newly created comment and update the post comment count
-			const comments = await db
-				.select({ id: comment.id })
-				.from(comment)
-				.where(eq(comment.postId, convertToUUID(testPostSUUID)))
-				.orderBy(comment.createdAt)
-				.limit(2);
-
-			await db.delete(comment).where(eq(comment.id, comments.at(1)?.id ?? ''));
-			await db
-				.update(post)
-				.set({ commentsCount: 11 })
-				.where(eq(post.id, convertToUUID(testPostSUUID)));
+			expect(updatedReplyCount?.repliesCount).toEqual(
+				(initialReplyCount?.repliesCount ?? 0) + 1
+			);
 		});
 	});
 
@@ -491,7 +476,7 @@ describe('Comment Routes Integration Tests', () => {
 			testUrl = fullTestUrl(testParentCommentSUUID);
 		});
 
-		it('should return HTTP 401 when the route is accessed without login', async () => {
+		it('should return HTTP 401 when the route is accessed without authentication', async () => {
 			await api.patch(testUrl).expect(401);
 		});
 
@@ -507,7 +492,7 @@ describe('Comment Routes Integration Tests', () => {
 			vi.useRealTimers();
 		});
 
-		it('should return HTTP 400 and a message when the provided id is invalid (not SUUID)', async () => {
+		it('should return HTTP 400 and a message when the comment id is in invalid format', async () => {
 			const response: ResponseWithError = await api
 				.patch(fullTestUrl('random-id'))
 				.auth(authToken, { type: 'bearer' })
@@ -517,7 +502,7 @@ describe('Comment Routes Integration Tests', () => {
 			expect(response.body.error).toEqual('Valid id is required for comment');
 		});
 
-		it('should return HTTP 404 and a message when the provided id is valid (SUUID) but does not exist', async () => {
+		it('should return HTTP 404 and a message when the comment id does not exist', async () => {
 			const response: ResponseWithError = await api
 				.patch(fullTestUrl(generate()))
 				.auth(authToken, { type: 'bearer' })
@@ -541,7 +526,7 @@ describe('Comment Routes Integration Tests', () => {
 			}
 		);
 
-		it('should return the comment id on success', async () => {
+		it('should return HTTP 200 with the comment id when update is successful', async () => {
 			const response: SuperTestResponse<{ id: SUUID }> = await api
 				.patch(testUrl)
 				.auth(authToken, { type: 'bearer' })
@@ -559,7 +544,7 @@ describe('Comment Routes Integration Tests', () => {
 			testUrl = fullTestUrl(testParentCommentSUUID);
 		});
 
-		it('should return HTTP 401 when the route is accessed without login', async () => {
+		it('should return HTTP 401 when the route is accessed without authentication', async () => {
 			await api.delete(testUrl).expect(401);
 		});
 
@@ -571,7 +556,7 @@ describe('Comment Routes Integration Tests', () => {
 			vi.useRealTimers();
 		});
 
-		it('should return HTTP 400 and a message when the provided id is invalid (not SUUID)', async () => {
+		it('should return HTTP 400 and a message when the comment id is in invalid format', async () => {
 			const response: ResponseWithError = await api
 				.delete(fullTestUrl('random-id'))
 				.auth(authToken, { type: 'bearer' })
@@ -580,7 +565,7 @@ describe('Comment Routes Integration Tests', () => {
 			expect(response.body.error).toEqual('Valid id is required for comment');
 		});
 
-		it('should return HTTP 404 and a message when the provided id is valid (SUUID) but does not exist', async () => {
+		it('should return HTTP 404 and a message when the comment id does not exist', async () => {
 			const response: ResponseWithError = await api
 				.delete(fullTestUrl(generate()))
 				.auth(authToken, { type: 'bearer' })
@@ -589,69 +574,41 @@ describe('Comment Routes Integration Tests', () => {
 			expect(response.body.error).toEqual('Comment does not exist');
 		});
 
-		it('should return HTTP 500, a message and rollback comment deletion if an error occurs', async () => {
-			const response: ResponseWithError = await api
-				.delete(`${testUrl}?forceError=true`)
-				.auth(authToken, { type: 'bearer' })
-				.expect(500);
-
-			expect(response.body.error).toEqual(
-				'Forced transaction error for comment deletion'
-			);
-
-			const totalComments = await db
-				.select({ id: comment.id })
-				.from(comment)
-				.where(eq(comment.postId, convertToUUID(testPostSUUID)));
-
-			expect(totalComments).toHaveLength(11);
-
-			const postData = await getPostCommentsCount({ id: testPostSUUID });
-			expect(postData?.commentsCount).toEqual(11);
-		});
-
-		it('should return a message saying comment deleted successfully when reply is deleted on success. Parent comment should have a reply count of 0. Post should have a comment count of 10', async () => {
+		it('should return HTTP 200 with a success message when deleting a reply', async () => {
 			const response: SuperTestResponse<{ message: string }> = await api
 				.delete(fullTestUrl(testParentReplySUUID))
 				.auth(authToken, { type: 'bearer' })
 				.expect(200);
 
-			expect(response.body.message).toEqual('Comment deleted successfully');
+			expect(response.body.message).toEqual('Reply deleted successfully');
+		});
 
-			const parentCommentData = await getParentCommentReplyCount({
+		it('should decrement parent comment reply count when deleting a reply', async () => {
+			const initialReplyCount = await getCommentRepliesCount({
 				id: testParentCommentSUUID,
 			});
 
-			const postData = await getPostCommentsCount({ id: testPostSUUID });
+			await api
+				.delete(fullTestUrl(testAnotherParentReplySUUID))
+				.auth(authToken, { type: 'bearer' })
+				.expect(200);
 
-			expect(postData?.commentsCount).toEqual(10);
-			expect(parentCommentData?.repliesCount).toEqual(0);
-
-			// Add the deletedReply back to the database
-			await db.insert(comment).values({
-				...testReplyLevel1,
-				postId: convertToUUID(testPostSUUID),
-				userId: convertToUUID(testUserSUUID),
-				parentCommentId: convertToUUID(testParentCommentSUUID),
+			const updatedReplyCount = await getCommentRepliesCount({
+				id: testParentCommentSUUID,
 			});
 
-			await db
-				.update(post)
-				.set({ commentsCount: 11 })
-				.where(eq(post.id, convertToUUID(testPostSUUID)));
+			expect(updatedReplyCount?.repliesCount).toEqual(
+				(initialReplyCount?.repliesCount ?? 0) - 1
+			);
 		});
 
-		it('should return a message saying comment deleted successfully on success. Post should have a comment count of 10', async () => {
+		it('should return HTTP 200 with success message when deleting a top-level comment', async () => {
 			const response: SuperTestResponse<{ message: string }> = await api
 				.delete(testUrl)
 				.auth(authToken, { type: 'bearer' })
 				.expect(200);
 
 			expect(response.body.message).toEqual('Comment deleted successfully');
-
-			const postData = await getPostCommentsCount({ id: testPostSUUID });
-
-			expect(postData?.commentsCount).toEqual(10);
 		});
 	});
 });

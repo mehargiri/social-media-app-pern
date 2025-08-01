@@ -4,7 +4,7 @@ import {
 	sampleSUUID,
 } from '@/utils/test.utils.js';
 import { Request, Response } from 'express';
-import { generate, SUUID } from 'short-uuid';
+import { SUUID } from 'short-uuid';
 import { beforeEach, describe, expect, it, Mock, vi } from 'vitest';
 import {
 	createComment,
@@ -13,8 +13,8 @@ import {
 	getReplies,
 	updateComment,
 } from './comment.controllers.js';
+import { commentExists } from './comment.services.helpers.js';
 import {
-	commentExists,
 	deleteCommentById,
 	findComments,
 	findReplies,
@@ -44,8 +44,12 @@ if (replyToNotCreate) replyToNotCreate.commentLevel = 0;
 
 describe('Comment Controller Functions', () => {
 	const req = {
-		params: { id: sampleSUUID },
-		query: { parentCommentId: sampleSUUID, postId: sampleSUUID },
+		params: {
+			parentCommentId: sampleSUUID,
+			postId: sampleSUUID,
+			id: sampleSUUID,
+		},
+		query: {},
 		body: commentToCreate,
 	};
 
@@ -54,14 +58,17 @@ describe('Comment Controller Functions', () => {
 		json: vi.fn(),
 	};
 
-	vi.mock('./comment.services.ts', () => ({
+	vi.mock('./comment.services.js', () => ({
 		makeComment: vi.fn(),
-		commentExists: vi.fn(),
 		updateCommentById: vi.fn(),
 		deleteCommentById: vi.fn(),
 		findComments: vi.fn(),
 		findReplies: vi.fn(),
 		updateParentCommentReplyCount: vi.fn(),
+	}));
+
+	vi.mock('./comment.services.helpers.js', () => ({
+		commentExists: vi.fn(),
 	}));
 
 	describe('getComments function', () => {
@@ -88,14 +95,14 @@ describe('Comment Controller Functions', () => {
 		};
 
 		it('should throw Error when the postId is invalid', async () => {
-			req.query.postId = 'random-id' as SUUID;
+			req.params.postId = 'random-id' as SUUID;
 			await expect(callTestFn()).rejects.toThrowError(
 				Error('Valid id is required for post')
 			);
 		});
 
 		it('should call res.json with the comments and a nextCursor value on success', async () => {
-			req.query.postId = sampleSUUID;
+			req.params.postId = sampleSUUID;
 			(findComments as Mock).mockResolvedValue(testComments);
 			await callTestFn();
 
@@ -130,14 +137,14 @@ describe('Comment Controller Functions', () => {
 		};
 
 		it('should throw Error when the parentCommentId is invalid', async () => {
-			req.query.parentCommentId = 'random-id' as SUUID;
+			req.params.parentCommentId = 'random-id' as SUUID;
 			await expect(callTestFn()).rejects.toThrowError(
 				Error('Valid id is required for parent comment')
 			);
 		});
 
 		it('should call res.json with the replies and a nextCursor value on success', async () => {
-			req.query.parentCommentId = sampleSUUID;
+			req.params.parentCommentId = sampleSUUID;
 			(findReplies as Mock).mockResolvedValue(testReplies);
 			await callTestFn();
 
@@ -150,21 +157,6 @@ describe('Comment Controller Functions', () => {
 	});
 
 	describe('createComment function', () => {
-		it('should throw Error when parentCommentId and comment level of 0 is present in req.body', async () => {
-			req.body = replyToNotCreate;
-			await expect(
-				createComment(
-					req as unknown as Request<never, never, CommentType>,
-					res as unknown as Response
-				)
-			).rejects.toThrowError(
-				Error(
-					'Comment level has to be greater than 0 if parent comment id is present',
-					{ cause: 400 }
-				)
-			);
-		});
-
 		it('should call makeComment and res.sendStatus with HTTP 201 on success for a comment creation', async () => {
 			req.body = commentToCreate;
 			(makeComment as Mock).mockResolvedValue({ id: sampleSUUID });
@@ -205,12 +197,6 @@ describe('Comment Controller Functions', () => {
 			);
 		});
 
-		it('should throw Error when comment with given id in request params does not exist', async () => {
-			await expect(callTestFn(generate())).rejects.toThrowError(
-				Error('Comment does not exist', { cause: 404 })
-			);
-		});
-
 		it('should call res.json with the same id present in request params on success', async () => {
 			(commentExists as Mock).mockResolvedValue(true);
 			(updateCommentById as Mock).mockResolvedValue({ id: sampleSUUID });
@@ -224,9 +210,8 @@ describe('Comment Controller Functions', () => {
 			vi.resetAllMocks();
 		});
 
-		const callTestFn = async (id: SUUID, parentCommentId?: SUUID) => {
+		const callTestFn = async (id: SUUID) => {
 			req.params.id = id;
-			if (parentCommentId) req.query.parentCommentId = parentCommentId;
 			await deleteComment(
 				req as unknown as Request<{ id: SUUID }, never, never>,
 				res as unknown as Response
@@ -236,12 +221,6 @@ describe('Comment Controller Functions', () => {
 		it('should throw Error when invalid id is provided in the request params', async () => {
 			await expect(callTestFn('random-id' as SUUID)).rejects.toThrowError(
 				Error('Valid id is required for comment', { cause: 400 })
-			);
-		});
-
-		it('should throw Error when comment with given id in request params does not exist', async () => {
-			await expect(callTestFn(generate(), sampleSUUID)).rejects.toThrowError(
-				Error('Comment does not exist', { cause: 404 })
 			);
 		});
 
@@ -256,10 +235,13 @@ describe('Comment Controller Functions', () => {
 
 		it('should call res.json with a message on successful deletion of a reply', async () => {
 			(commentExists as Mock).mockResolvedValue(true);
-			(deleteCommentById as Mock).mockResolvedValue({ id: sampleSUUID });
-			await callTestFn(sampleSUUID, sampleSUUID);
+			(deleteCommentById as Mock).mockResolvedValue({
+				id: sampleSUUID,
+				isReply: true,
+			});
+			await callTestFn(sampleSUUID);
 			expect(res.json).toHaveBeenCalledWith({
-				message: 'Comment deleted successfully',
+				message: 'Reply deleted successfully',
 			});
 		});
 	});

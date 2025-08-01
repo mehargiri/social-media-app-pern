@@ -48,10 +48,11 @@ export const updateCommentSchema = createCommentSchema.omit({
 
 export type CommentType = Omit<
 	typeof createCommentSchema._output,
-	'postId' | 'parentCommentId'
+	'postId' | 'parentCommentId' | 'commentLevel'
 > & {
 	postId: SUUID;
 	parentCommentId: SUUID | null;
+	commentLevel?: number;
 };
 
 export type UpdateCommentType = typeof updateCommentSchema._output;
