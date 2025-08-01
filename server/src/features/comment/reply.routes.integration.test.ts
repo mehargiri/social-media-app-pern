@@ -55,7 +55,7 @@ describe('Reply Routes Integration Tests', () => {
 		testParentCommentSUUID = convertToSUUID(testCommentId?.id ?? '');
 
 		testReplies.forEach((reply) => {
-			reply.userId = testUserId?.id ?? '';
+			reply.userId = (testUserId?.id ?? '') as unknown as SUUID;
 			reply.postId = (testPostId?.id ?? '') as unknown as SUUID;
 			reply.parentCommentId = (testCommentId?.id ?? '') as unknown as SUUID;
 		});
@@ -88,7 +88,26 @@ describe('Reply Routes Integration Tests', () => {
 			testUrl = `${testUrlBase}/${testParentCommentSUUID}`;
 		});
 
-		it('should return HTTP 401 when the route is accessed without login', async () => {
+		type GetRepliesResponse = SuperTestResponse<
+			ExtractResponseBody<Parameters<typeof getReplies>['1']>
+		>;
+
+		const requiredProps = [
+			'id',
+			'postId',
+			'content',
+			'likesCount',
+			'topLikeType1',
+			'topLikeType2',
+			'repliesCount',
+			'createdAt',
+			'updatedAt',
+			'profilePic',
+			'fullName',
+			'userId',
+		];
+
+		it('should return HTTP 401 when the route is accessed without authentication', async () => {
 			await api.get(testUrl).expect(401);
 		});
 
@@ -112,41 +131,33 @@ describe('Reply Routes Integration Tests', () => {
 			);
 		});
 
-		it('should return total 5 replies with id, postId, content, likesCount, topLikeType1, topLikeType2, repliesCount, createdAt, updatedAt, user fullName, user profilePic along with a nextCursor value when a query params of parentCommentId is only passed. should return the next 5 replies that was created before the cursor value with id, postIdm content, likesCount, topLikeType1, topLikeType2, repliesCount, createdAt, updatedAt, user fullName, user profilePic along with a nextCUrsor value when query params of parentCommentId and cursor is passed', async () => {
-			type getRepliesResponse = SuperTestResponse<
-				ExtractResponseBody<Parameters<typeof getReplies>['1']>
-			>;
-
-			const requiredPropsReply = [
-				'id',
-				'postId',
-				'content',
-				'likesCount',
-				'topLikeType1',
-				'topLikeType2',
-				'repliesCount',
-				'createdAt',
-				'updatedAt',
-				'profilePic',
-				'fullName',
-				'userId',
-			];
-
-			const response: getRepliesResponse = await api
+		it('should return first 5 replies with required properties', async () => {
+			const response: GetRepliesResponse = await api
 				.get(testUrl)
 				.auth(authToken, { type: 'bearer' })
 				.expect(200);
 
-			const cursor = response.body.nextCursor ?? '';
-
 			expect(response.body.nextCursor).not.toBeNull();
 			expect(response.body.replies).toHaveLength(5);
 
-			requiredPropsReply.forEach((prop) => {
+			requiredProps.forEach((prop) => {
 				expect(response.body.replies[0]).toHaveProperty(prop);
 			});
 
-			const cursorResponse: getRepliesResponse = await api
+			response.body.replies.forEach((reply) => {
+				expect(reply.parentCommentId).toEqual(testParentCommentSUUID);
+			});
+		});
+
+		it('should return next 5 replies when cursor is provided', async () => {
+			const firstResponse: GetRepliesResponse = await api
+				.get(testUrl)
+				.auth(authToken, { type: 'bearer' })
+				.expect(200);
+
+			const cursor = firstResponse.body.nextCursor ?? '';
+
+			const cursorResponse: GetRepliesResponse = await api
 				.get(`${testUrl}?cursor=${cursor}`)
 				.auth(authToken, { type: 'bearer' })
 				.expect(200);
@@ -161,8 +172,12 @@ describe('Reply Routes Integration Tests', () => {
 				new Date(cursorResponse.body.replies[0]?.createdAt ?? '').getTime()
 			).toBeLessThan(decodedCursorTime);
 
-			requiredPropsReply.forEach((prop) => {
+			requiredProps.forEach((prop) => {
 				expect(cursorResponse.body.replies[0]).toHaveProperty(prop);
+			});
+
+			cursorResponse.body.replies.forEach((reply) => {
+				expect(reply.parentCommentId).toEqual(testParentCommentSUUID);
 			});
 		});
 	});
