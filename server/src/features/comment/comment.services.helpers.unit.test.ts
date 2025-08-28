@@ -24,7 +24,7 @@ const mockDb = db as unknown as {
 
 const sampleUUID = convertToUUID(sampleSUUID);
 
-describe('Comment Controller Helper Functions', () => {
+describe('Comment Service Helper Functions', () => {
 	vi.mock('@/db/index.js', () => ({
 		db: {
 			select: vi.fn(),
